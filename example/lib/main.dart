@@ -67,32 +67,36 @@ class _ExamplePageState extends State<ExamplePage>
     'motorolla', 'munchausen', 'baron', 'vagon', 'padma', 'padla', 'princess',
   ];
 
+  static double getMeasure(final int value) => value.toDouble();
+
+  static ChartLabel getLabel(final int value, final Color color)
+  {
+    final brightness = ThemeData.estimateBrightnessForColor(color);
+    return ChartLabel('$value',
+      style: TextStyle(
+        fontSize: 9,
+        color: brightness == Brightness.dark
+          ? Colors.white
+          : Colors.black,
+      ),
+      position: LabelPosition.inside,
+      alignment: Alignment.center,
+    );
+  }
+
   List<Series<String, int>> get rndSeries
   {
+    const colors = [ Colors.red, Colors.green, Colors.blue, Colors.amber ];
     final n = names.toList();
     final d = List.generate(5, (_) => n.removeAt(random.nextInt(n.length)));
-    final result = [
-      Series(
+    final result = colors
+      .map((color) => Series(
         data: { d[0]: rndInt, d[1]: rndInt, d[2]: rndInt, d[3]: rndInt, d[4]: rndInt },
-        color: Colors.red,
-        measureAccessor: (value) => value.toDouble(),
-      ),
-      Series(
-        data: { d[0]: rndInt, d[1]: rndInt, d[2]: rndInt, d[3]: rndInt, d[4]: rndInt },
-        color: Colors.green,
-        measureAccessor: (value) => value.toDouble(),
-      ),
-      Series(
-        data: { d[0]: rndInt, d[1]: rndInt, d[2]: rndInt, d[3]: rndInt, d[4]: rndInt },
-        color: Colors.blue,
-        measureAccessor: (value) => value.toDouble(),
-      ),
-      Series(
-        data: { d[0]: rndInt, d[1]: rndInt, d[2]: rndInt, d[3]: rndInt, d[4]: rndInt },
-        color: Colors.amber,
-        measureAccessor: (value) => value.toDouble(),
-      ),
-    ];
+        color: color,
+        measureAccessor: getMeasure,
+        labelAccessor: (value) => getLabel(value, color),
+      ))
+      .toList();
     return result;
   }
 
@@ -106,38 +110,48 @@ class _ExamplePageState extends State<ExamplePage>
   @override
   Widget build(final BuildContext context)
   {
-    final series = [
-      Series(
-        data: { 'alpha': -300, 'beta': -10, 'gamma': 1, 'theta\nmeta\nbarbuletta': 76 },
-        color: Colors.amber.withOpacity(0.5),
-        measureAccessor: (value) => value.toDouble(),
-      ),
-    ];
-    final number = NumberFormat.compact(locale: 'ru');
     return Scaffold(
       appBar: AppBar(title: const Text('Example')),
       body: Scrollbar(
-        child: SingleChildScrollView(
-          child: Column(
-            children: List.generate(100, (i) => Card(
-              child: SizedBox(
-                height: 250,
-                child: BarChart(
-                  data: _data[i],
-                  measureFormatter: number.format,
-                  valueAxis: Axis.vertical,
-                  inverted: false,
-                  // crossAxisLabelsOffset: 4.0,
-                  // crossAxisWidth: 70,
-                  // minTickSpacing: 50,
-                  barPadding: 10,
-                  barSpacing: 10,
-                  padding: const EdgeInsets.all(16.0),
-                  radius: const Radius.circular(6),
-                ),
-              ),
-            )),
-          ),
+        // child: buildFullListView(context),
+        child: buildGenerativeListView(context),
+      ),
+    );
+  }
+
+  Widget buildFullListView(final BuildContext context)
+  {
+    return SingleChildScrollView(child: Column(
+      children: List.generate(_data.length, (i) => buildCard(context, i)),
+    ));
+  }
+
+  Widget buildGenerativeListView(final BuildContext context)
+  {
+    return ListView.builder(
+      itemCount: _data.length,
+      itemBuilder: (context, index) => buildCard(context, index),
+    );
+  }
+
+  Widget buildCard(final BuildContext context, final int index)
+  {
+    final number = NumberFormat.compact(locale: 'ru');
+    return Card(
+      child: SizedBox(
+        height: 200,
+        child: BarChart(
+          data: _data[index],
+          measureFormatter: number.format,
+          valueAxis: Axis.vertical,
+          inverted: false,
+          // crossAxisLabelsOffset: 4.0,
+          // crossAxisWidth: 70,
+          // minTickSpacing: 50,
+          barPadding: 10,
+          barSpacing: 10,
+          padding: const EdgeInsets.all(16.0),
+          radius: const Radius.circular(6),
         ),
       ),
     );

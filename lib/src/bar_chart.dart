@@ -72,14 +72,33 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
   void initState()
   {
     super.initState();
-    ticksResolver = BarTicksResolver(minSpacing: widget.minTickSpacing);
+    _ticksResolver = BarTicksResolver(minSpacing: widget.minTickSpacing);
+    _stacks = _stacksFromSeries(widget.data,
+      domainFormatter: widget.domainFormatter,
+      valueAxis: widget.valueAxis,
+      inverted: widget.inverted,
+      radius: widget.radius,
+    );
   }
 
   @override
   void didUpdateWidget(covariant BarChart<D, T> oldWidget)
   {
     if (widget.minTickSpacing != oldWidget.minTickSpacing) {
-      ticksResolver = BarTicksResolver(minSpacing: widget.minTickSpacing);
+      _ticksResolver = BarTicksResolver(minSpacing: widget.minTickSpacing);
+    }
+    if (widget.data != oldWidget.data
+      || widget.domainFormatter != oldWidget.domainFormatter
+      || widget.valueAxis != oldWidget.valueAxis
+      || widget.inverted != oldWidget.inverted
+      || widget.radius != oldWidget.radius
+    ) {
+      _stacks = _stacksFromSeries(widget.data,
+        domainFormatter: widget.domainFormatter,
+        valueAxis: widget.valueAxis,
+        inverted: widget.inverted,
+        radius: widget.radius,
+      );
     }
     super.didUpdateWidget(oldWidget);
   }
@@ -91,13 +110,8 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
     return LayoutBuilder(builder: (context, constraints) => CustomPaint(
       size: constraints.biggest,
       painter: BarPainter(
-        data: _stacksFromSeries(widget.data,
-          domainFormatter: widget.domainFormatter,
-          valueAxis: widget.valueAxis,
-          inverted: widget.inverted,
-          radius: widget.radius,
-        ),
-        ticksResolver: ticksResolver,
+        data: _stacks,
+        ticksResolver: _ticksResolver,
         measureFormatter: widget.measureFormatter,
         mainAxisTextStyle: widget.mainAxisTextStyle ?? TextStyle(
           fontSize: 12.0,
@@ -216,5 +230,6 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
     );
   }
 
-  late BarTicksResolver ticksResolver;
+  late BarTicksResolver _ticksResolver;
+  late BarChartStacks _stacks;
 }

@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
+import '../../bar_charts.dart';
 import '../ticks_resolver.dart';
 import '../types.dart';
 import 'stacked_data.dart';
@@ -79,6 +80,10 @@ class BarPainter extends CustomPainter
     for (final segment in layoutData.segments) {
       final (rrect, paint) = segment;
       canvas.drawRRect(rrect, paint);
+    }
+    for (final label in layoutData.labels) {
+      final (offset, paragraph) = label;
+      canvas.drawParagraph(paragraph, offset);
     }
   }
 
@@ -327,6 +332,10 @@ class BarPainter extends CustomPainter
       final domainLabel = domainLabels[i];
       final stack = data.stacks[i];
       final divided = stack.dividedSegments;
+      final barMargin = (
+        start: i == 0 ? barPadding : barSpacing / 2,
+        end: i == data.stacks.length - 1 ? barPadding : barSpacing / 2,
+      );
       _buildSections(layoutData,
         segments: divided.upper,
         valueAxis: data.valueAxis,
@@ -336,6 +345,7 @@ class BarPainter extends CustomPainter
         mainZeroOffset: upperMainZeroOffset,
         crossOffset: crossOffset,
         barThickness: barThickness,
+        barMargin: barMargin,
       );
       _buildSections(layoutData,
         segments: divided.lower,
@@ -346,6 +356,7 @@ class BarPainter extends CustomPainter
         mainZeroOffset: lowerMainZeroOffset,
         crossOffset: crossOffset,
         barThickness: barThickness,
+        barMargin: barMargin,
       );
       switch (data.valueAxis) {
         case Axis.horizontal:
@@ -384,11 +395,13 @@ class BarPainter extends CustomPainter
     required final double mainZeroOffset,
     required final double crossOffset,
     required final double barThickness,
+    required final ({ double start, double end}) barMargin,
   })
   {
     var mainOffset = mainZeroOffset;
     for (final (_, segment) in segments) {
       final measure = segment.value;
+      final label = segment.label;
       final sectionLength = measure.abs() / maxStackSumm * mainAxisSize;
       final paint = Paint()
         ..style = PaintingStyle.fill
@@ -396,7 +409,7 @@ class BarPainter extends CustomPainter
       ;
       switch (valueAxis) {
         case Axis.horizontal:
-          final rect = Rect.fromLTWH(
+          final innerRect = Rect.fromLTWH(
             inverted
               ? mainAxisSize - mainOffset - sectionLength
               : mainOffset,
@@ -404,8 +417,13 @@ class BarPainter extends CustomPainter
             sectionLength,
             barThickness,
           );
+          final rectPadding = EdgeInsets.only(
+            top: barMargin.start,
+            bottom: barMargin.end,
+          );
+          final outerRect = rectPadding.inflateRect(innerRect);
           layoutData.segments.add((
-            RRect.fromRectAndCorners(rect,
+            RRect.fromRectAndCorners(innerRect,
               topLeft: segment.borderRadius.topLeft,
               bottomLeft: segment.borderRadius.bottomLeft,
               topRight: segment.borderRadius.topRight,
@@ -413,9 +431,35 @@ class BarPainter extends CustomPainter
             ),
             paint,
           ));
+          if (label != null) {
+            final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle())
+              ..pushStyle(label.style.getTextStyle())
+              ..addText(label.value)
+            ;
+            final paragraph = paragraphBuilder.build();
+            paragraph.layout(ui.ParagraphConstraints(width: outerRect.width));
+            final lblSize = Size(paragraph.longestLine, paragraph.height);
+            final lblOffset = label.alignment.inscribe(lblSize, innerRect);
+            switch (label.position) {
+              case LabelPosition.inside:
+                layoutData.labels.add((lblOffset.topLeft, paragraph));
+                break;
+              case LabelPosition.outside:
+                layoutData.labels.add((
+                  Offset(
+                    inverted
+                      ? innerRect.left - lblSize.longestSide
+                      : innerRect.right,
+                    lblOffset.top,
+                  ),
+                  paragraph,
+                ));
+                break;
+            }
+          }
           break;
         case Axis.vertical:
-          final rect = Rect.fromLTWH(
+          final innerRect = Rect.fromLTWH(
             crossOffset,
             inverted
               ? mainOffset
@@ -423,8 +467,13 @@ class BarPainter extends CustomPainter
             barThickness,
             sectionLength,
           );
+          final rectPadding = EdgeInsets.only(
+            left: barMargin.start,
+            right: barMargin.end,
+          );
+          final outerRect = rectPadding.inflateRect(innerRect);
           layoutData.segments.add((
-            RRect.fromRectAndCorners(rect,
+            RRect.fromRectAndCorners(innerRect,
               topLeft: segment.borderRadius.topLeft,
               bottomLeft: segment.borderRadius.bottomLeft,
               topRight: segment.borderRadius.topRight,
@@ -432,6 +481,30 @@ class BarPainter extends CustomPainter
             ),
             paint,
           ));
+          if (label != null) {
+            final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle())
+              ..pushStyle(label.style.getTextStyle())
+              ..addText(label.value)
+            ;
+            final paragraph = paragraphBuilder.build();
+            paragraph.layout(ui.ParagraphConstraints(width: outerRect.width));
+            final lblSize = Size(paragraph.longestLine, paragraph.height);
+            final lblOffset = label.alignment.inscribe(lblSize, innerRect);
+            switch (label.position) {
+              case LabelPosition.inside:
+                layoutData.labels.add((lblOffset.topLeft, paragraph));
+                break;
+              case LabelPosition.outside:
+                layoutData.labels.add((
+                  Offset(
+                    lblOffset.left,
+                    inverted ? outerRect.bottom : outerRect.top - lblSize.height,
+                  ),
+                  paragraph,
+                ));
+                break;
+            }
+          }
           break;
       }
       mainOffset += sectionLength;
@@ -450,6 +523,7 @@ class _LayoutData
   final List<(Offset, ui.Paragraph)> mainLabels;
   final List<(Offset, ui.Paragraph)> crossLabels;
   final List<(RRect, Paint)> segments;
+  final List<(Offset, ui.Paragraph)> labels;
 
   const _LayoutData({
     required this.clipRect,
@@ -458,6 +532,7 @@ class _LayoutData
     required this.mainLabels,
     required this.crossLabels,
     required this.segments,
+    required this.labels,
   });
 
   factory _LayoutData.empty(final Rect clipRect) => _LayoutData(
@@ -467,5 +542,6 @@ class _LayoutData
     mainLabels: [],
     crossLabels: [],
     segments: [],
+    labels: [],
   );
 }
