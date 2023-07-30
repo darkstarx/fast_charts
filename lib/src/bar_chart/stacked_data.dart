@@ -27,6 +27,7 @@ class BarChartStack
 {
   final String domain;
   final List<BarChartSegment> segments;
+  final Radius radius;
 
   Iterable<BarChartSegment> get lowerSegments
     => segments.where((e) => e.value < 0);
@@ -73,6 +74,7 @@ class BarChartStack
   const BarChartStack({
     required this.domain,
     required this.segments,
+    this.radius = Radius.zero,
   });
 
   BarChartStack operator *(final double ratio) => BarChartStack(
@@ -86,32 +88,27 @@ class BarChartSegment
 {
   final double value;
   final Color color;
-  final BorderRadius borderRadius;
   final ChartLabel? label;
 
   const BarChartSegment({
     required this.value,
     required this.color,
-    this.borderRadius = const BorderRadius.all(Radius.zero),
     this.label,
   });
 
   BarChartSegment copyWith({
     final double? value,
     final Color? color,
-    final BorderRadius? borderRadius,
     final ChartLabel? label,
   }) => BarChartSegment(
     value: value ?? this.value,
     color: color ?? this.color,
-    borderRadius: borderRadius ?? this.borderRadius,
     label: label ?? this.label,
   );
 
   BarChartSegment operator *(final double ratio) => BarChartSegment(
     value: value * ratio,
     color: color,
-    borderRadius: borderRadius,
     label: label,
   );
 }

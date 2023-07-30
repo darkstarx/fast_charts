@@ -34,6 +34,7 @@ class BarChart<D, T> extends StatefulWidget
   final double barPadding;
   final EdgeInsets padding;
   final Radius radius;
+  final Duration animationDuration;
 
   const BarChart({
     super.key,
@@ -60,6 +61,7 @@ class BarChart<D, T> extends StatefulWidget
 
     this.padding = EdgeInsets.zero,
     this.radius = Radius.zero,
+    this.animationDuration = Duration.zero,
   });
 
   @override
@@ -77,7 +79,7 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
     _ticksResolver = BarTicksResolver(minSpacing: widget.minTickSpacing);
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 350),
+      duration: widget.animationDuration,
     );
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
@@ -105,6 +107,9 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
     if (widget.minTickSpacing != oldWidget.minTickSpacing) {
       _ticksResolver = BarTicksResolver(minSpacing: widget.minTickSpacing);
     }
+    if (widget.animationDuration != oldWidget.animationDuration) {
+      _controller.duration = widget.animationDuration;
+    }
     if (widget.data != oldWidget.data
       || widget.domainFormatter != oldWidget.domainFormatter
       || widget.valueAxis != oldWidget.valueAxis
@@ -118,7 +123,9 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
         radius: widget.radius,
       );
       _stacks = newStacks;
-      if (widget.data != oldWidget.data) {
+      if (widget.data != oldWidget.data
+        && widget.animationDuration > Duration.zero
+      ) {
         final compatible = _checkSeriesCompatibility(oldWidget.data, widget.data);
         if (compatible) {
           _controller.forward(from: 0.0);
@@ -199,6 +206,7 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
         final stack = stacks.putIfAbsent(domain, () => BarChartStack(
           domain: domainLabel,
           segments: [],
+          radius: radius,
         ));
         final label = series.labelAccessor == null
           ? null
@@ -208,61 +216,6 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
           color: series.color,
           label: label,
         ));
-      }
-    }
-    if (radius != Radius.zero) {
-      for (final stack in stacks.values) {
-        final divided = stack.dividedSegments;
-        for (var i = 0; i < divided.lower.length; ++i) {
-          final (index, segment) = divided.lower[i];
-          final isFirst = inverted ? i == divided.lower.length - 1 : i == 0;
-          final isLast = inverted ? i == 0 : i == divided.lower.length - 1;
-          final BorderRadius borderRadius;
-          switch (valueAxis) {
-            case Axis.horizontal:
-              borderRadius = BorderRadius.only(
-                topLeft: isLast && !inverted ? radius : Radius.zero,
-                bottomLeft: isLast && !inverted ? radius : Radius.zero,
-                topRight: isFirst && inverted ? radius : Radius.zero,
-                bottomRight: isFirst && inverted ? radius : Radius.zero,
-              );
-              break;
-            case Axis.vertical:
-              borderRadius = BorderRadius.only(
-                topLeft: isFirst && inverted ? radius : Radius.zero,
-                topRight: isFirst && inverted ? radius : Radius.zero,
-                bottomLeft: isLast && !inverted ? radius : Radius.zero,
-                bottomRight: isLast && !inverted ? radius : Radius.zero,
-              );
-              break;
-          }
-          stack.segments[index] = segment.copyWith(borderRadius: borderRadius);
-        }
-        for (var i = 0; i < divided.upper.length; ++i) {
-          final (index, segment) = divided.upper[i];
-          final isFirst = inverted ? i == divided.upper.length - 1 : i == 0;
-          final isLast = inverted ? i == 0 : i == divided.upper.length - 1;
-          final BorderRadius borderRadius;
-          switch (valueAxis) {
-            case Axis.horizontal:
-              borderRadius = BorderRadius.only(
-                topLeft: isFirst && inverted ? radius : Radius.zero,
-                bottomLeft: isFirst && inverted ? radius : Radius.zero,
-                topRight: isLast && !inverted ? radius : Radius.zero,
-                bottomRight: isLast && !inverted ? radius : Radius.zero,
-              );
-              break;
-            case Axis.vertical:
-              borderRadius = BorderRadius.only(
-                topLeft: isLast && !inverted ? radius : Radius.zero,
-                topRight: isLast && !inverted ? radius : Radius.zero,
-                bottomLeft: isFirst && inverted ? radius : Radius.zero,
-                bottomRight: isFirst && inverted ? radius : Radius.zero,
-              );
-              break;
-          }
-          stack.segments[index] = segment.copyWith(borderRadius: borderRadius);
-        }
       }
     }
     return BarChartStacks(

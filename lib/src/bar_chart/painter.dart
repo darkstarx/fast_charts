@@ -82,10 +82,23 @@ class BarPainter extends CustomPainter
       final (offset, paragraph) = label;
       canvas.drawParagraph(paragraph, offset);
     }
-    final segments = _segments = _getSegments(layoutData);
-    for (final segment in segments.values.expand((e) => e.values)) {
-      final (rrect, paint) = segment;
-      canvas.drawRRect(rrect, paint);
+    final segments = _stacks = _getStacks(layoutData);
+    for (final entry in segments.entries) {
+      final stack = entry.value;
+      final clip = !stack.clipRRect.isRect;
+      if (stack.segments.isEmpty) continue;
+      if (clip) {
+        canvas.save();
+        canvas.clipRRect(stack.clipRRect);
+      }
+      for (final entry in stack.segments.entries) {
+        final segment = entry.value;
+        final (rect, paint) = segment;
+        canvas.drawRect(rect, paint);
+      }
+      if (clip) {
+        canvas.restore();
+      }
     }
     if (animation == null) {
       for (final label in layoutData.labels) {
@@ -116,7 +129,7 @@ class BarPainter extends CustomPainter
       || padding != oldDelegate.padding
     ;
     if (needRepaint) {
-      _oldSegments = oldDelegate._segments;
+      _oldStacks = oldDelegate._stacks;
       _layoutData = null;
     }
     return needRepaint;
@@ -128,87 +141,112 @@ class BarPainter extends CustomPainter
     return false;
   }
 
-  Map<int, Map<int, (RRect, Paint)>> _getSegments(final _LayoutData layoutData)
+  Map<int, _LayoutStack> _getStacks(final _LayoutData layoutData)
   {
     if (animation == null) {
-      return layoutData.segments;
+      return layoutData.stacks;
     } else {
-      final result = <int, Map<int, (RRect, Paint)>>{};
-      for (final entry in layoutData.segments.entries) {
+      final result = <int, _LayoutStack>{};
+      for (final entry in layoutData.stacks.entries) {
         final stackId = entry.key;
-        final segments = entry.value;
-        final oldSegments = _oldSegments?[stackId] ?? {};
+        final stack = entry.value;
+        final oldStack = _oldStacks?[stackId];
+        final oldSegments = oldStack?.segments ?? {};
         final anyOldSegment = oldSegments.isEmpty
           ? null
           : oldSegments.values.first;
-        for (final entry in segments.entries) {
+        final rrect = oldStack == null
+          ? stack.clipRRect
+          : RRect.lerp(oldStack.clipRRect, stack.clipRRect, animation!.value)!;
+        final layoutStack = result.putIfAbsent(stackId,
+          () => _LayoutStack.empty(),
+        );
+        Rect? stackRect;
+        for (final entry in stack.segments.entries) {
           final segmentId = entry.key;
           final segment = entry.value;
-          final (newRrect, newPaint) = segment;
+          final (newRect, newPaint) = segment;
           var oldSegment = oldSegments[segmentId];
           if (oldSegment == null) {
             final (dRect, _) = anyOldSegment ?? segment;
             switch (data.valueAxis) {
               case Axis.horizontal:
                 oldSegment = (
-                  RRect.fromLTRBR(
+                  Rect.fromLTRB(
                     layoutData.crossAxisOffset, dRect.top,
                     layoutData.crossAxisOffset, dRect.bottom,
-                    Radius.zero,
                   ),
                   newPaint
                 );
                 break;
               case Axis.vertical:
                 oldSegment = (
-                  RRect.fromLTRBR(
+                  Rect.fromLTRB(
                     dRect.left, layoutData.crossAxisOffset,
                     dRect.right, layoutData.crossAxisOffset,
-                    Radius.zero,
                   ),
                   newPaint
                 );
                 break;
             }
           }
-          final (oldRrect, oldPaint) = oldSegment;
-          final rrect = RRect.lerp(oldRrect, newRrect, animation!.value)!;
+          final (oldRect, oldPaint) = oldSegment;
+          final rect = Rect.lerp(oldRect, newRect, animation!.value)!;
           final paint = Paint()
-            ..color = Color.lerp(oldPaint.color, newPaint.color, animation!.value)!
+            ..color = Color.lerp(oldPaint.color, newPaint.color,
+                animation!.value
+              )!
             ..style = PaintingStyle.fill
           ;
-          result.putIfAbsent(stackId, () => {})[segmentId] = (rrect, paint);
+          if (stackRect == null) {
+            stackRect = rect;
+          } else {
+            stackRect = stackRect.expandToInclude(rect);
+          }
+          layoutStack.segments[segmentId] = (rect, paint);
         }
-        final anyNewSegment = segments.isEmpty
+        final anyNewSegment = stack.segments.isEmpty
           ? null
-          : segments.values.first;
+          : stack.segments.values.first;
         for (final entry in oldSegments.entries.where(
-          (e) => !segments.containsKey(e.key)
+          (e) => !stack.segments.containsKey(e.key)
         )) {
           final segmentId = entry.key;
           final oldSegment = entry.value;
-          final (oldRrect, oldPaint) = oldSegment;
+          final (oldRect, oldPaint) = oldSegment;
           final (dRect, _) = anyNewSegment ?? oldSegment;
-          final RRect newRrect;
+          final Rect newRect;
           switch (data.valueAxis) {
             case Axis.horizontal:
-              newRrect = RRect.fromLTRBR(
+              newRect = Rect.fromLTRB(
                 layoutData.crossAxisOffset, dRect.top,
                 layoutData.crossAxisOffset, dRect.bottom,
-                Radius.zero,
               );
               break;
             case Axis.vertical:
-              newRrect = RRect.fromLTRBR(
+              newRect = Rect.fromLTRB(
                 dRect.left, layoutData.crossAxisOffset,
                 dRect.right, layoutData.crossAxisOffset,
-                Radius.zero,
               );
               break;
           }
-          final rrect = RRect.lerp(oldRrect, newRrect, animation!.value)!;
-          result.putIfAbsent(stackId, () => {})[segmentId] = (rrect, oldPaint);
+          final rect = Rect.lerp(oldRect, newRect, animation!.value)!;
+          if (stackRect == null) {
+            stackRect = rect;
+          } else {
+            stackRect = stackRect.expandToInclude(rect);
+          }
+          layoutStack.segments[segmentId] = (rect, oldPaint);
         }
+        result[stackId] = _LayoutStack(
+          segments: layoutStack.segments,
+          clipRRect: RRect.fromRectAndCorners(stackRect!,
+            topLeft: rrect.tlRadius,
+            bottomLeft: rrect.blRadius,
+            topRight: rrect.trRadius,
+            bottomRight: rrect.brRadius,
+          )
+        );
       }
       return result;
     }
@@ -438,6 +476,27 @@ class BarPainter extends CustomPainter
         start: i == 0 ? barPadding : barSpacing / 2,
         end: i == data.stacks.length - 1 ? barPadding : barSpacing / 2,
       );
+      final startRadius = divided.upper.isEmpty
+        ? Radius.zero
+        : stack.radius;
+      final endRadius = divided.lower.isEmpty
+        ? Radius.zero
+        : stack.radius;
+      final BorderRadius borderRadius;
+      switch (data.valueAxis) {
+        case Axis.horizontal:
+          borderRadius = BorderRadius.horizontal(
+            left: data.inverted ? startRadius : endRadius,
+            right: data.inverted ? endRadius : startRadius,
+          );
+          break;
+        case Axis.vertical:
+          borderRadius = BorderRadius.vertical(
+            top: data.inverted ? endRadius : startRadius,
+            bottom: data.inverted ? startRadius : endRadius,
+          );
+          break;
+      }
       _buildSections(layoutData,
         stackIndex: i,
         segments: divided.upper,
@@ -462,6 +521,10 @@ class BarPainter extends CustomPainter
         barThickness: barThickness,
         barMargin: barMargin,
       );
+      final layoutStack = layoutData.stacks[i];
+      if (layoutStack != null) {
+        layoutData.stacks[i] = layoutStack.withBorderRadius(borderRadius);
+      }
       switch (data.valueAxis) {
         case Axis.horizontal:
           final labelOffset = Offset(
@@ -503,8 +566,8 @@ class BarPainter extends CustomPainter
     required final ({ double start, double end}) barMargin,
   })
   {
-    final barSegments = layoutData.segments.putIfAbsent(stackIndex,
-      () => SplayTreeMap()
+    final stack = layoutData.stacks.putIfAbsent(stackIndex,
+      () => _LayoutStack.empty(),
     );
     var mainOffset = mainZeroOffset;
     for (final (index, segment) in segments) {
@@ -530,15 +593,7 @@ class BarPainter extends CustomPainter
             bottom: barMargin.end,
           );
           final outerRect = rectPadding.inflateRect(innerRect);
-          barSegments[index] = (
-            RRect.fromRectAndCorners(innerRect,
-              topLeft: segment.borderRadius.topLeft,
-              bottomLeft: segment.borderRadius.bottomLeft,
-              topRight: segment.borderRadius.topRight,
-              bottomRight: segment.borderRadius.bottomRight,
-            ),
-            paint,
-          );
+          stack.segments[index] = (innerRect, paint);
           if (label != null) {
             final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle())
               ..pushStyle(label.style.getTextStyle())
@@ -580,15 +635,7 @@ class BarPainter extends CustomPainter
             right: barMargin.end,
           );
           final outerRect = rectPadding.inflateRect(innerRect);
-          barSegments[index] = (
-            RRect.fromRectAndCorners(innerRect,
-              topLeft: segment.borderRadius.topLeft,
-              bottomLeft: segment.borderRadius.bottomLeft,
-              topRight: segment.borderRadius.topRight,
-              bottomRight: segment.borderRadius.bottomRight,
-            ),
-            paint,
-          );
+          stack.segments[index] = (innerRect, paint);
           if (label != null) {
             final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle())
               ..pushStyle(label.style.getTextStyle())
@@ -622,8 +669,8 @@ class BarPainter extends CustomPainter
   }
 
   _LayoutData? _layoutData;
-  Map<int, Map<int, (RRect, Paint)>>? _segments;
-  Map<int, Map<int, (RRect, Paint)>>? _oldSegments;
+  Map<int, _LayoutStack>? _stacks;
+  Map<int, _LayoutStack>? _oldStacks;
 }
 
 
@@ -635,7 +682,7 @@ class _LayoutData
   final List<(Offset, Offset)> guideLines;
   final List<(Offset, ui.Paragraph)> mainLabels;
   final List<(Offset, ui.Paragraph)> crossLabels;
-  final Map<int, Map<int, (RRect, Paint)>> segments;
+  final Map<int, _LayoutStack> stacks;
   final List<(Offset, ui.Paragraph)> labels;
 
   const _LayoutData({
@@ -645,7 +692,7 @@ class _LayoutData
     required this.guideLines,
     required this.mainLabels,
     required this.crossLabels,
-    required this.segments,
+    required this.stacks,
     required this.labels,
   });
 
@@ -656,7 +703,7 @@ class _LayoutData
     guideLines: [],
     mainLabels: [],
     crossLabels: [],
-    segments: {},
+    stacks: {},
     labels: [],
   );
 
@@ -667,7 +714,7 @@ class _LayoutData
     final List<(Offset, Offset)>? guideLines,
     final List<(Offset, ui.Paragraph)>? mainLabels,
     final List<(Offset, ui.Paragraph)>? crossLabels,
-    final Map<int, Map<int, (RRect, Paint)>>? segments,
+    final Map<int, _LayoutStack>? stacks,
     final List<(Offset, ui.Paragraph)>? labels,
   }) => _LayoutData(
     clipRect: clipRect ?? this.clipRect,
@@ -676,7 +723,43 @@ class _LayoutData
     guideLines: guideLines ?? this.guideLines,
     mainLabels: mainLabels ?? this.mainLabels,
     crossLabels: crossLabels ?? this.crossLabels,
-    segments: segments ?? this.segments,
+    stacks: stacks ?? this.stacks,
     labels: labels ?? this.labels,
   );
+}
+
+
+class _LayoutStack
+{
+  final Map<int, (Rect, Paint)> segments;
+  final RRect clipRRect;
+
+  const _LayoutStack({
+    required this.segments,
+    required this.clipRRect,
+  });
+
+  factory _LayoutStack.empty() => _LayoutStack(
+    segments: SplayTreeMap(),
+    clipRRect: RRect.zero,
+  );
+
+  _LayoutStack withBorderRadius(final BorderRadius radius)
+  {
+    if (segments.isEmpty) return this;
+    Rect? clipRect;
+    for (final segment in segments.values) {
+      final (rect, _) = segment;
+      if (clipRect == null) {
+        clipRect = rect;
+      } else {
+        clipRect = clipRect.expandToInclude(rect);
+      }
+    }
+    assert(clipRect != null);
+    return _LayoutStack(
+      segments: segments,
+      clipRRect: radius.toRRect(clipRect!),
+    );
+  }
 }
