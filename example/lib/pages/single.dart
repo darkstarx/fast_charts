@@ -38,26 +38,63 @@ class _SingleChartPageState extends State<SingleChartPage>
   }
 
   static const domains = [ 'alpha', 'beta', 'gamma', 'delta', 'epsilon' ];
-  static const colors = [
-    Colors.redAccent,
-    Colors.greenAccent,
-    Colors.blueAccent,
-    Colors.amberAccent,
+  static const colors1 = [
+    Color(0xFFF48FB1),
+    Color(0xFF69F0AE),
+    Color(0xFF82B1FF),
+    Color(0xFFFFD740),
+  ];
+  static const colors2 = [
+    Color(0xFFF44336),
+    Color(0xFF4CAF50),
+    Color(0xFF2196F3),
+    Color(0xFFFFC107),
   ];
 
-  static final data1 = colors.map((color) => Series<String, int>(
+  static final data1 = colors1.map((color) => Series<String, int>(
     data: { for (final d in domains) d: rndInt },
     color: color,
     measureAccessor: getMeasure,
     labelAccessor: (value) => getLabel(value, color),
   )).toList();
 
-  static final data2 = colors.map((color) => Series<String, int>(
-    data: { for (final d in domains) d: rndInt },
-    color: color,
+  static final data2 = data1.indexed.map((r) => Series<String, int>(
+    data: r.$2.data.map((key, value) => MapEntry(
+      key,
+      (value * random.nextDouble()).round(),
+    )),
+    color: colors2[r.$1],
     measureAccessor: getMeasure,
-    labelAccessor: (value) => getLabel(value, color),
+    labelAccessor: (value) => getLabel(value, colors2[r.$1]),
   )).toList();
+
+  // static final data2 = data1.map((s) => Series<String, int>(
+  //   data: s.data.map((key, value) => MapEntry(
+  //     key,
+  //     (value * random.nextDouble()).round(),
+  //   )),
+  //   color: s.color,
+  //   measureAccessor: s.measureAccessor,
+  //   labelAccessor: s.labelAccessor,
+  // )).toList();
+
+  // static final data2 = colors.followedBy([ Colors.purple ])
+  //   .map((color) => Series<String, int>(
+  //     data: { for (final d in domains) d: rndInt },
+  //     color: color,
+  //     measureAccessor: getMeasure,
+  //     labelAccessor: (value) => getLabel(value, color),
+  //   ))
+  //   .toList();
+
+  // static final data2 = colors.followedBy([ Colors.purple ])
+  //   .map((color) => Series<String, int>(
+  //     data: { for (final d in domains.followedBy([ 'zeta' ])) d: rndInt },
+  //     color: color,
+  //     measureAccessor: getMeasure,
+  //     labelAccessor: (value) => getLabel(value, color),
+  //   ))
+  //   .toList();
 
   static double getMeasure(final int value) => value.toDouble();
 
@@ -66,7 +103,7 @@ class _SingleChartPageState extends State<SingleChartPage>
     final brightness = ThemeData.estimateBrightnessForColor(color);
     return ChartLabel('$value',
       style: TextStyle(
-        fontSize: 9,
+        fontSize: 11,
         color: brightness == Brightness.dark
           ? Colors.white
           : Colors.black,
@@ -108,14 +145,14 @@ class _SingleChartPageState extends State<SingleChartPage>
           data: _data,
           measureFormatter: number.format,
           valueAxis: Axis.vertical,
-          inverted: false,
+          inverted: true,
           // crossAxisLabelsOffset: 4.0,
           // crossAxisWidth: 70,
           minTickSpacing: 40,
           barPadding: 10,
           barSpacing: 10,
           padding: const EdgeInsets.all(16.0),
-          radius: const Radius.circular(6),
+          radius: const Radius.circular(16),
         ),
       ),
     );

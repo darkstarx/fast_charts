@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'bar_chart/stacked_data.dart';
@@ -67,18 +68,35 @@ class BarChart<D, T> extends StatefulWidget
 
 
 class _BarChartState<D, T> extends State<BarChart<D, T>>
+  with SingleTickerProviderStateMixin
 {
   @override
   void initState()
   {
     super.initState();
     _ticksResolver = BarTicksResolver(minSpacing: widget.minTickSpacing);
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        _onAnimationDone();
+      }
+    });
     _stacks = _stacksFromSeries(widget.data,
       domainFormatter: widget.domainFormatter,
       valueAxis: widget.valueAxis,
       inverted: widget.inverted,
       radius: widget.radius,
     );
+  }
+
+  @override
+  void dispose()
+  {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
@@ -93,12 +111,19 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
       || widget.inverted != oldWidget.inverted
       || widget.radius != oldWidget.radius
     ) {
-      _stacks = _stacksFromSeries(widget.data,
+      final newStacks = _stacksFromSeries(widget.data,
         domainFormatter: widget.domainFormatter,
         valueAxis: widget.valueAxis,
         inverted: widget.inverted,
         radius: widget.radius,
       );
+      _stacks = newStacks;
+      if (widget.data != oldWidget.data) {
+        final compatible = _checkSeriesCompatibility(oldWidget.data, widget.data);
+        if (compatible) {
+          _controller.forward(from: 0.0);
+        }
+      }
     }
     super.didUpdateWidget(oldWidget);
   }
@@ -111,6 +136,7 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
       size: constraints.biggest,
       painter: BarPainter(
         data: _stacks,
+        animation: _controller.isAnimating ? _controller : null,
         ticksResolver: _ticksResolver,
         measureFormatter: widget.measureFormatter,
         mainAxisTextStyle: widget.mainAxisTextStyle ?? TextStyle(
@@ -135,6 +161,22 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
         padding: widget.padding,
       ),
     ));
+  }
+
+  bool _checkSeriesCompatibility(
+    final List<Series<D, T>> set1,
+    final List<Series<D, T>> set2,
+  )
+  {
+    final d1 = set1.map((e) => e.data.keys.toList()).expand((e) => e).toSet();
+    final d2 = set2.map((e) => e.data.keys.toList()).expand((e) => e).toSet();
+    if (!setEquals(d1, d2)) return false;
+    return true;
+  }
+
+  void _onAnimationDone()
+  {
+    setState(() {});
   }
 
   static BarChartStacks _stacksFromSeries<D, T>(
@@ -232,4 +274,5 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
 
   late BarTicksResolver _ticksResolver;
   late BarChartStacks _stacks;
+  late AnimationController _controller;
 }

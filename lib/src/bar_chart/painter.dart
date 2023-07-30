@@ -1,6 +1,8 @@
+import 'dart:collection';
 import 'dart:math';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../bar_charts.dart';
@@ -12,6 +14,7 @@ import 'stacked_data.dart';
 class BarPainter extends CustomPainter
 {
   final BarChartStacks data;
+  final ValueListenable<double>? animation;
   final TicksResolver ticksResolver;
   final MeasureFormatter? measureFormatter;
   final TextStyle mainAxisTextStyle;
@@ -30,6 +33,7 @@ class BarPainter extends CustomPainter
 
   BarPainter({
     required this.data,
+    this.animation,
     required this.ticksResolver,
     this.measureFormatter,
     required this.mainAxisTextStyle,
@@ -45,7 +49,8 @@ class BarPainter extends CustomPainter
     this.barPadding = 0.0,
     this.barSpacing = 0.0,
     this.padding = EdgeInsets.zero,
-  });
+  })
+  : super(repaint: animation);
 
   @override
   void paint(final Canvas canvas, final Size size)
@@ -77,13 +82,16 @@ class BarPainter extends CustomPainter
       final (offset, paragraph) = label;
       canvas.drawParagraph(paragraph, offset);
     }
-    for (final segment in layoutData.segments) {
+    final segments = _segments = _getSegments(layoutData);
+    for (final segment in segments.values.expand((e) => e.values)) {
       final (rrect, paint) = segment;
       canvas.drawRRect(rrect, paint);
     }
-    for (final label in layoutData.labels) {
-      final (offset, paragraph) = label;
-      canvas.drawParagraph(paragraph, offset);
+    if (animation == null) {
+      for (final label in layoutData.labels) {
+        final (offset, paragraph) = label;
+        canvas.drawParagraph(paragraph, offset);
+      }
     }
   }
 
@@ -108,6 +116,7 @@ class BarPainter extends CustomPainter
       || padding != oldDelegate.padding
     ;
     if (needRepaint) {
+      _oldSegments = oldDelegate._segments;
       _layoutData = null;
     }
     return needRepaint;
@@ -117,6 +126,92 @@ class BarPainter extends CustomPainter
   bool shouldRebuildSemantics(final BarPainter oldDelegate)
   {
     return false;
+  }
+
+  Map<int, Map<int, (RRect, Paint)>> _getSegments(final _LayoutData layoutData)
+  {
+    if (animation == null) {
+      return layoutData.segments;
+    } else {
+      final result = <int, Map<int, (RRect, Paint)>>{};
+      for (final entry in layoutData.segments.entries) {
+        final stackId = entry.key;
+        final segments = entry.value;
+        final oldSegments = _oldSegments?[stackId] ?? {};
+        final anyOldSegment = oldSegments.isEmpty
+          ? null
+          : oldSegments.values.first;
+        for (final entry in segments.entries) {
+          final segmentId = entry.key;
+          final segment = entry.value;
+          final (newRrect, newPaint) = segment;
+          var oldSegment = oldSegments[segmentId];
+          if (oldSegment == null) {
+            final (dRect, _) = anyOldSegment ?? segment;
+            switch (data.valueAxis) {
+              case Axis.horizontal:
+                oldSegment = (
+                  RRect.fromLTRBR(
+                    layoutData.crossAxisOffset, dRect.top,
+                    layoutData.crossAxisOffset, dRect.bottom,
+                    Radius.zero,
+                  ),
+                  newPaint
+                );
+                break;
+              case Axis.vertical:
+                oldSegment = (
+                  RRect.fromLTRBR(
+                    dRect.left, layoutData.crossAxisOffset,
+                    dRect.right, layoutData.crossAxisOffset,
+                    Radius.zero,
+                  ),
+                  newPaint
+                );
+                break;
+            }
+          }
+          final (oldRrect, oldPaint) = oldSegment;
+          final rrect = RRect.lerp(oldRrect, newRrect, animation!.value)!;
+          final paint = Paint()
+            ..color = Color.lerp(oldPaint.color, newPaint.color, animation!.value)!
+            ..style = PaintingStyle.fill
+          ;
+          result.putIfAbsent(stackId, () => {})[segmentId] = (rrect, paint);
+        }
+        final anyNewSegment = segments.isEmpty
+          ? null
+          : segments.values.first;
+        for (final entry in oldSegments.entries.where(
+          (e) => !segments.containsKey(e.key)
+        )) {
+          final segmentId = entry.key;
+          final oldSegment = entry.value;
+          final (oldRrect, oldPaint) = oldSegment;
+          final (dRect, _) = anyNewSegment ?? oldSegment;
+          final RRect newRrect;
+          switch (data.valueAxis) {
+            case Axis.horizontal:
+              newRrect = RRect.fromLTRBR(
+                layoutData.crossAxisOffset, dRect.top,
+                layoutData.crossAxisOffset, dRect.bottom,
+                Radius.zero,
+              );
+              break;
+            case Axis.vertical:
+              newRrect = RRect.fromLTRBR(
+                dRect.left, layoutData.crossAxisOffset,
+                dRect.right, layoutData.crossAxisOffset,
+                Radius.zero,
+              );
+              break;
+          }
+          final rrect = RRect.lerp(oldRrect, newRrect, animation!.value)!;
+          result.putIfAbsent(stackId, () => {})[segmentId] = (rrect, oldPaint);
+        }
+      }
+      return result;
+    }
   }
 
   _LayoutData _buildLayout(final Size size)
@@ -307,6 +402,7 @@ class BarPainter extends CustomPainter
 
     final double upperMainZeroOffset;
     final double lowerMainZeroOffset;
+    final double zeroOnMainAxis;
     double crossOffset;
     switch (data.valueAxis) {
       case Axis.horizontal:
@@ -316,6 +412,9 @@ class BarPainter extends CustomPainter
         lowerMainZeroOffset = data.inverted
           ? upperPixels + innerRect.left + crossAxisField
           : upperPixels - innerRect.left - crossAxisField;
+        zeroOnMainAxis = data.inverted
+          ? lowerMainZeroOffset
+          : upperMainZeroOffset;
         crossOffset = innerRect.top + barPadding;
         break;
       case Axis.vertical:
@@ -325,18 +424,22 @@ class BarPainter extends CustomPainter
         lowerMainZeroOffset = data.inverted
           ? upperPixels - innerRect.top
           : upperPixels + innerRect.top;
+        zeroOnMainAxis = data.inverted
+          ? upperMainZeroOffset
+          : lowerMainZeroOffset;
         crossOffset = innerRect.left + mainAxisField + barPadding;
         break;
     }
     for (var i = 0; i < data.stacks.length; ++i) {
-      final domainLabel = domainLabels[i];
       final stack = data.stacks[i];
+      final domainLabel = domainLabels[i];
       final divided = stack.dividedSegments;
       final barMargin = (
         start: i == 0 ? barPadding : barSpacing / 2,
         end: i == data.stacks.length - 1 ? barPadding : barSpacing / 2,
       );
       _buildSections(layoutData,
+        stackIndex: i,
         segments: divided.upper,
         valueAxis: data.valueAxis,
         inverted: data.inverted,
@@ -348,6 +451,7 @@ class BarPainter extends CustomPainter
         barMargin: barMargin,
       );
       _buildSections(layoutData,
+        stackIndex: i,
         segments: divided.lower,
         valueAxis: data.valueAxis,
         inverted: !data.inverted,
@@ -378,7 +482,7 @@ class BarPainter extends CustomPainter
       }
       crossOffset += barSpacing + barThickness;
     }
-    return layoutData;
+    return layoutData.copyWith(crossAxisOffset: zeroOnMainAxis);
   }
 
   String _formatMeasure(final double measure)
@@ -387,6 +491,7 @@ class BarPainter extends CustomPainter
   }
 
   static void _buildSections(final _LayoutData layoutData, {
+    required final int stackIndex,
     required final List<(int, BarChartSegment)> segments,
     required final Axis valueAxis,
     required final bool inverted,
@@ -398,8 +503,11 @@ class BarPainter extends CustomPainter
     required final ({ double start, double end}) barMargin,
   })
   {
+    final barSegments = layoutData.segments.putIfAbsent(stackIndex,
+      () => SplayTreeMap()
+    );
     var mainOffset = mainZeroOffset;
-    for (final (_, segment) in segments) {
+    for (final (index, segment) in segments) {
       final measure = segment.value;
       final label = segment.label;
       final sectionLength = measure.abs() / maxStackSumm * mainAxisSize;
@@ -422,7 +530,7 @@ class BarPainter extends CustomPainter
             bottom: barMargin.end,
           );
           final outerRect = rectPadding.inflateRect(innerRect);
-          layoutData.segments.add((
+          barSegments[index] = (
             RRect.fromRectAndCorners(innerRect,
               topLeft: segment.borderRadius.topLeft,
               bottomLeft: segment.borderRadius.bottomLeft,
@@ -430,7 +538,7 @@ class BarPainter extends CustomPainter
               bottomRight: segment.borderRadius.bottomRight,
             ),
             paint,
-          ));
+          );
           if (label != null) {
             final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle())
               ..pushStyle(label.style.getTextStyle())
@@ -472,7 +580,7 @@ class BarPainter extends CustomPainter
             right: barMargin.end,
           );
           final outerRect = rectPadding.inflateRect(innerRect);
-          layoutData.segments.add((
+          barSegments[index] = (
             RRect.fromRectAndCorners(innerRect,
               topLeft: segment.borderRadius.topLeft,
               bottomLeft: segment.borderRadius.bottomLeft,
@@ -480,7 +588,7 @@ class BarPainter extends CustomPainter
               bottomRight: segment.borderRadius.bottomRight,
             ),
             paint,
-          ));
+          );
           if (label != null) {
             final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle())
               ..pushStyle(label.style.getTextStyle())
@@ -492,7 +600,9 @@ class BarPainter extends CustomPainter
             final lblOffset = label.alignment.inscribe(lblSize, innerRect);
             switch (label.position) {
               case LabelPosition.inside:
-                layoutData.labels.add((lblOffset.topLeft, paragraph));
+                if (lblSize.height <= innerRect.height) {
+                  layoutData.labels.add((lblOffset.topLeft, paragraph));
+                }
                 break;
               case LabelPosition.outside:
                 layoutData.labels.add((
@@ -512,21 +622,25 @@ class BarPainter extends CustomPainter
   }
 
   _LayoutData? _layoutData;
+  Map<int, Map<int, (RRect, Paint)>>? _segments;
+  Map<int, Map<int, (RRect, Paint)>>? _oldSegments;
 }
 
 
 class _LayoutData
 {
   final Rect clipRect;
+  final double crossAxisOffset;
   final List<(Offset, Offset)> axisLines;
   final List<(Offset, Offset)> guideLines;
   final List<(Offset, ui.Paragraph)> mainLabels;
   final List<(Offset, ui.Paragraph)> crossLabels;
-  final List<(RRect, Paint)> segments;
+  final Map<int, Map<int, (RRect, Paint)>> segments;
   final List<(Offset, ui.Paragraph)> labels;
 
   const _LayoutData({
     required this.clipRect,
+    required this.crossAxisOffset,
     required this.axisLines,
     required this.guideLines,
     required this.mainLabels,
@@ -537,11 +651,32 @@ class _LayoutData
 
   factory _LayoutData.empty(final Rect clipRect) => _LayoutData(
     clipRect: clipRect,
+    crossAxisOffset: 0.0,
     axisLines: [],
     guideLines: [],
     mainLabels: [],
     crossLabels: [],
-    segments: [],
+    segments: {},
     labels: [],
+  );
+
+  _LayoutData copyWith({
+    final Rect? clipRect,
+    final double? crossAxisOffset,
+    final List<(Offset, Offset)>? axisLines,
+    final List<(Offset, Offset)>? guideLines,
+    final List<(Offset, ui.Paragraph)>? mainLabels,
+    final List<(Offset, ui.Paragraph)>? crossLabels,
+    final Map<int, Map<int, (RRect, Paint)>>? segments,
+    final List<(Offset, ui.Paragraph)>? labels,
+  }) => _LayoutData(
+    clipRect: clipRect ?? this.clipRect,
+    crossAxisOffset: crossAxisOffset ?? this.crossAxisOffset,
+    axisLines: axisLines ?? this.axisLines,
+    guideLines: guideLines ?? this.guideLines,
+    mainLabels: mainLabels ?? this.mainLabels,
+    crossLabels: crossLabels ?? this.crossLabels,
+    segments: segments ?? this.segments,
+    labels: labels ?? this.labels,
   );
 }
