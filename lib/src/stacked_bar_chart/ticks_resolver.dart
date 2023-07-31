@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../ticks_resolver.dart';
+import '../types.dart';
 
 
 class BarTicksResolver implements TicksResolver
@@ -128,7 +129,7 @@ class BarTicksResolver implements TicksResolver
 
       // Check each step size and see if it would contain the "favored" value
       for (final step in _defaultSteps) {
-        final tmpStepSize = _removeRoundingErrors(step * favoredTensBase);
+        final tmpStepSize = (step * favoredTensBase).smooth;
 
         // If prefer whole number, then don't allow a step that isn't one.
         if (dataIsInWholeNumbers && tmpStepSize.round() != tmpStepSize) {
@@ -148,7 +149,7 @@ class BarTicksResolver implements TicksResolver
       // Walk the step sizes calculating a starting point and seeing if the high
       // end is included in the range given that step size.
       for (final step in _defaultSteps) {
-        final tmpStepSize = _removeRoundingErrors(step * diffTensBase);
+        final tmpStepSize = (step * diffTensBase).smooth;
 
         // If prefer whole number, then don't allow a step that isn't one.
         if (dataIsInWholeNumbers && tmpStepSize.round() != tmpStepSize) {
@@ -174,21 +175,6 @@ class BarTicksResolver implements TicksResolver
       .toDouble() * (number < 0.0 ? -1.0 : 1.0);
   }
 
-  /// Attempts to slice off very small floating point rounding effects for the
-  /// given number.
-  ///
-  /// @param number the number to round.
-  /// @return the rounded number.
-  static double _removeRoundingErrors(final double number)
-  {
-    // sufficiently large multiplier to handle generating ticks on the order
-    // of 10^-9.
-    const multiplier = 1.0e9;
-    return number > 100.0
-      ? number.roundToDouble()
-      : (number * multiplier).roundToDouble() / multiplier;
-  }
-
   /// Returns the step numerically less than the number by step increments.
   static double _getStepLessThan(final double number, final double stepSize)
   {
@@ -206,9 +192,7 @@ class BarTicksResolver implements TicksResolver
     final double tickStart,
     final double stepSize,
     final int tickCount,
-  ) => List.generate(tickCount,
-    (i) => _removeRoundingErrors(tickStart + (i * stepSize))
-  );
+  ) => List.generate(tickCount, (i) => (tickStart + (i * stepSize)).smooth);
 
   /// Potential steps available to the baseTen value of the data.
   static const _defaultSteps = [

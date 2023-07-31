@@ -5,7 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
-import '../../bar_charts.dart';
+import '../label_position.dart';
 import '../ticks_resolver.dart';
 import '../types.dart';
 import 'stacked_data.dart';
@@ -326,14 +326,15 @@ class BarPainter extends CustomPainter
         )
       )
     ;
+
     var maxStackSumm = minmaxStackSumm.upper - minmaxStackSumm.lower;
     var upperPixels = minmaxStackSumm.upper * mainAxisSize / maxStackSumm;
     var lowerPixels = -minmaxStackSumm.lower * mainAxisSize / maxStackSumm;
     final double mainAxisField;
     final List<(double, String)> mainTicks;
     final tickValues = ticksResolver.getTickValues(
-      minValue: minmaxStackSumm.lower,
-      maxValue: minmaxStackSumm.upper,
+      minValue: minmaxStackSumm.lower.smooth,
+      maxValue: minmaxStackSumm.upper.smooth,
       axisSize: mainAxisSize,
     );
     if (tickValues.isEmpty) {
