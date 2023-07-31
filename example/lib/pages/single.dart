@@ -142,7 +142,7 @@ class _SingleChartPageState extends State<SingleChartPage>
     return Card(
       child: SizedBox(
         height: 300,
-        child: BarChart(
+        child: StackedBarChart(
           data: _data,
           measureFormatter: number.format,
           valueAxis: Axis.vertical,

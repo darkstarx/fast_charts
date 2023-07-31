@@ -114,7 +114,7 @@ class _ChartListPageState extends State<ChartListPage>
     return Card(
       child: SizedBox(
         height: 200,
-        child: BarChart(
+        child: StackedBarChart(
           data: _data[index],
           measureFormatter: number.format,
           valueAxis: Axis.vertical,

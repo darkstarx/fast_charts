@@ -1,14 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import 'bar_chart/stacked_data.dart';
-import 'bar_chart/painter.dart';
-import 'bar_chart/ticks_resolver.dart';
+import 'stacked_bar_chart/stacked_data.dart';
+import 'stacked_bar_chart/painter.dart';
+import 'stacked_bar_chart/ticks_resolver.dart';
 import 'types.dart';
 import 'series.dart';
 
 
-class BarChart<D, T> extends StatefulWidget
+class StackedBarChart<D, T> extends StatefulWidget
 {
   final List<Series<D, T>> data;
   final DomainFormatter<D>? domainFormatter;
@@ -36,7 +36,7 @@ class BarChart<D, T> extends StatefulWidget
   final Radius radius;
   final Duration animationDuration;
 
-  const BarChart({
+  const StackedBarChart({
     super.key,
     required this.data,
     this.domainFormatter,
@@ -65,11 +65,11 @@ class BarChart<D, T> extends StatefulWidget
   });
 
   @override
-  State<BarChart> createState() => _BarChartState<D, T>();
+  State<StackedBarChart> createState() => _StackedBarChartState<D, T>();
 }
 
 
-class _BarChartState<D, T> extends State<BarChart<D, T>>
+class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
   with SingleTickerProviderStateMixin
 {
   @override
@@ -102,7 +102,7 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
   }
 
   @override
-  void didUpdateWidget(covariant BarChart<D, T> oldWidget)
+  void didUpdateWidget(covariant StackedBarChart<D, T> oldWidget)
   {
     if (widget.minTickSpacing != oldWidget.minTickSpacing) {
       _ticksResolver = BarTicksResolver(minSpacing: widget.minTickSpacing);
