@@ -26,6 +26,8 @@ class StackedBarChart<D, T> extends StatefulWidget
   final double crossAxisLabelsOffset;
   final double? mainAxisWidth;
   final double? crossAxisWidth;
+  final bool showMainAxisLine;
+  final bool showCrossAxisLine;
 
   /// The minimal distance between next ticks in pixels.
   final double minTickSpacing;
@@ -54,6 +56,8 @@ class StackedBarChart<D, T> extends StatefulWidget
     this.crossAxisLabelsOffset = 2.0,
     this.mainAxisWidth,
     this.crossAxisWidth,
+    this.showMainAxisLine = false,
+    this.showCrossAxisLine = true,
     this.minTickSpacing = 64.0,
 
     this.barSpacing = 0.0,
@@ -163,6 +167,8 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
         crossAxisLabelsOffset: widget.crossAxisLabelsOffset,
         mainAxisWidth: widget.mainAxisWidth,
         crossAxisWidth: widget.crossAxisWidth,
+        showMainAxisLine: widget.showMainAxisLine,
+        showCrossAxisLine: widget.showCrossAxisLine,
         barPadding: widget.barPadding,
         barSpacing: widget.barSpacing,
         padding: widget.padding,

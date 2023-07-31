@@ -27,6 +27,8 @@ class BarPainter extends CustomPainter
   final double crossAxisLabelsOffset;
   final double? mainAxisWidth;
   final double? crossAxisWidth;
+  final bool showMainAxisLine;
+  final bool showCrossAxisLine;
   final double barPadding;
   final double barSpacing;
   final EdgeInsets padding;
@@ -46,6 +48,8 @@ class BarPainter extends CustomPainter
     this.crossAxisLabelsOffset = 2.0,
     this.mainAxisWidth,
     this.crossAxisWidth,
+    this.showMainAxisLine = false,
+    this.showCrossAxisLine = true,
     this.barPadding = 0.0,
     this.barSpacing = 0.0,
     this.padding = EdgeInsets.zero,
@@ -124,6 +128,8 @@ class BarPainter extends CustomPainter
       || crossAxisLabelsOffset != oldDelegate.crossAxisLabelsOffset
       || mainAxisWidth != oldDelegate.mainAxisWidth
       || crossAxisWidth != oldDelegate.crossAxisWidth
+      || showMainAxisLine != oldDelegate.showMainAxisLine
+      || showCrossAxisLine != oldDelegate.showCrossAxisLine
       || barPadding != oldDelegate.barPadding
       || barSpacing != oldDelegate.barSpacing
       || padding != oldDelegate.padding
@@ -363,10 +369,12 @@ class BarPainter extends CustomPainter
           + axisThickness + mainAxisLabelsOffset;
         final mainAxisOffset = innerRect.top + crossAxisSize - mainAxisField
           + axisThickness / 2;
-        layoutData.axisLines.add((
-          Offset(innerRect.left + crossAxisField, mainAxisOffset),
-          Offset(innerRect.left + crossAxisField + mainAxisSize, mainAxisOffset),
-        ));
+        if (showMainAxisLine) {
+          layoutData.axisLines.add((
+            Offset(innerRect.left + crossAxisField, mainAxisOffset),
+            Offset(innerRect.left + crossAxisField + mainAxisSize, mainAxisOffset),
+          ));
+        }
         final shift = innerRect.left + crossAxisField
           + (data.inverted ? upperPixels : lowerPixels);
         for (final label in mainLabels) {
@@ -378,7 +386,7 @@ class BarPainter extends CustomPainter
             Offset(labelOnMainAxis, innerRect.top),
             Offset(labelOnMainAxis, innerRect.top + crossAxisSize - mainAxisField),
           );
-          if (position == 0) {
+          if (position == 0 && showCrossAxisLine) {
             layoutData.axisLines.add(line);
           } else {
             layoutData.guideLines.add(line);
@@ -397,10 +405,12 @@ class BarPainter extends CustomPainter
           + axisThickness + mainAxisLabelsOffset;
         final mainAxisOffset = innerRect.left + mainAxisField
           - axisThickness / 2;
-        layoutData.axisLines.add((
-          Offset(mainAxisOffset, innerRect.top),
-          Offset(mainAxisOffset, innerRect.top + mainAxisSize),
-        ));
+        if (showMainAxisLine) {
+          layoutData.axisLines.add((
+            Offset(mainAxisOffset, innerRect.top),
+            Offset(mainAxisOffset, innerRect.top + mainAxisSize),
+          ));
+        }
         final shift = innerRect.top + (data.inverted ? lowerPixels : upperPixels);
         for (final label in mainLabels) {
           final (position, paragraph) = label;
@@ -411,7 +421,7 @@ class BarPainter extends CustomPainter
             Offset(innerRect.left + mainAxisField, labelOnMainAxis),
             Offset(innerRect.left + crossAxisSize, labelOnMainAxis),
           );
-          if (position == 0) {
+          if (position == 0 && showCrossAxisLine) {
             layoutData.axisLines.add(line);
           } else {
             layoutData.guideLines.add(line);
