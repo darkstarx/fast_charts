@@ -41,19 +41,24 @@ class BarChartStack
 
   ({
     List<(int, BarChartSegment)> lower,
+    List<(int, BarChartSegment)> zero,
     List<(int, BarChartSegment)> upper,
   }) get dividedSegments
   {
-    final lower = <(int, BarChartSegment)>[], upper = <(int, BarChartSegment)>[];
+    final lower = <(int, BarChartSegment)>[];
+    final zero = <(int, BarChartSegment)>[];
+    final upper = <(int, BarChartSegment)>[];
     for (var i = 0; i < segments.length; ++i) {
       final segment = segments[i];
       if (segment.value < 0) {
         lower.add((i, segment));
       } else if (segment.value > 0) {
         upper.add((i, segment));
+      } else {
+        zero.add((i, segment));
       }
     }
-    return (lower: lower, upper: upper);
+    return (lower: lower, zero: zero, upper: upper);
   }
 
   ({ double lower, double upper }) get summs

@@ -14,6 +14,7 @@ class StackedBarChart<D, T> extends StatefulWidget
   final DomainFormatter<D>? domainFormatter;
   final MeasureFormatter? measureFormatter;
   final Axis valueAxis;
+  final bool showZeroValues;
   final bool inverted;
 
   final TextStyle? mainAxisTextStyle;
@@ -44,6 +45,7 @@ class StackedBarChart<D, T> extends StatefulWidget
     this.domainFormatter,
     this.measureFormatter,
     this.valueAxis = Axis.vertical,
+    this.showZeroValues = false,
     this.inverted = false,
 
     this.mainAxisTextStyle,
@@ -150,6 +152,7 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
         animation: _controller.isAnimating ? _controller : null,
         ticksResolver: _ticksResolver,
         measureFormatter: widget.measureFormatter,
+        showZeroValues: widget.showZeroValues,
         mainAxisTextStyle: widget.mainAxisTextStyle ?? TextStyle(
           fontSize: 12.0,
           color: theme.colorScheme.onSurface,

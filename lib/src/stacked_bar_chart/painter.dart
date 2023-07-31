@@ -17,6 +17,7 @@ class BarPainter extends CustomPainter
   final ValueListenable<double>? animation;
   final TicksResolver ticksResolver;
   final MeasureFormatter? measureFormatter;
+  final bool showZeroValues;
   final TextStyle mainAxisTextStyle;
   final TextStyle crossAxisTextStyle;
   final Color axisColor;
@@ -38,6 +39,7 @@ class BarPainter extends CustomPainter
     this.animation,
     required this.ticksResolver,
     this.measureFormatter,
+    this.showZeroValues = false,
     required this.mainAxisTextStyle,
     required this.crossAxisTextStyle,
     required this.axisColor,
@@ -118,6 +120,7 @@ class BarPainter extends CustomPainter
     final needRepaint = data != oldDelegate.data
       || ticksResolver != oldDelegate.ticksResolver
       || measureFormatter != oldDelegate.measureFormatter
+      || showZeroValues != oldDelegate.showZeroValues
       || mainAxisTextStyle != oldDelegate.mainAxisTextStyle
       || crossAxisTextStyle != oldDelegate.crossAxisTextStyle
       || axisColor != oldDelegate.axisColor
@@ -481,15 +484,24 @@ class BarPainter extends CustomPainter
     for (var i = 0; i < data.stacks.length; ++i) {
       final stack = data.stacks[i];
       final domainLabel = domainLabels[i];
-      final divided = stack.dividedSegments;
+      final List<(int, BarChartSegment)> lowerSegments, upperSegments;
+      if (showZeroValues) {
+        final divided = stack.dividedSegments;
+        lowerSegments = divided.lower;
+        upperSegments = divided.zero.followedBy(divided.upper).toList();
+      } else {
+        final divided = stack.dividedSegments;
+        lowerSegments = divided.lower;
+        upperSegments = divided.upper;
+      }
       final barMargin = (
         start: i == 0 ? barPadding : barSpacing / 2,
         end: i == data.stacks.length - 1 ? barPadding : barSpacing / 2,
       );
-      final startRadius = divided.upper.isEmpty
+      final startRadius = upperSegments.isEmpty
         ? Radius.zero
         : stack.radius;
-      final endRadius = divided.lower.isEmpty
+      final endRadius = lowerSegments.isEmpty
         ? Radius.zero
         : stack.radius;
       final BorderRadius borderRadius;
@@ -509,7 +521,7 @@ class BarPainter extends CustomPainter
       }
       _buildSections(layoutData,
         stackIndex: i,
-        segments: divided.upper,
+        segments: upperSegments,
         valueAxis: data.valueAxis,
         inverted: data.inverted,
         maxStackSumm: maxStackSumm,
@@ -521,7 +533,7 @@ class BarPainter extends CustomPainter
       );
       _buildSections(layoutData,
         stackIndex: i,
-        segments: divided.lower,
+        segments: lowerSegments,
         valueAxis: data.valueAxis,
         inverted: !data.inverted,
         maxStackSumm: maxStackSumm,
@@ -580,6 +592,7 @@ class BarPainter extends CustomPainter
       () => _LayoutStack.empty(),
     );
     var mainOffset = mainZeroOffset;
+    segments.sort((a, b) => a.$1.compareTo(b.$1));
     for (final (index, segment) in segments) {
       final measure = segment.value;
       final label = segment.label;
