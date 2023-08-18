@@ -1,20 +1,21 @@
 import 'dart:math';
 
-import 'package:bar_charts/bar_charts.dart';
+import 'package:fast_charts/fast_charts.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 
-class ChartListPage extends StatefulWidget
+class StackedBarListPage extends StatefulWidget
 {
-  const ChartListPage({ super.key });
+  const StackedBarListPage({ super.key });
 
   @override
-  State<ChartListPage> createState() => _ChartListPageState();
+  State<StackedBarListPage> createState() => _StackedBarListPageState();
 }
 
 
-class _ChartListPageState extends State<ChartListPage>
+class _StackedBarListPageState extends State<StackedBarListPage>
 {
   static final random = Random();
 
@@ -58,7 +59,7 @@ class _ChartListPageState extends State<ChartListPage>
     );
   }
 
-  List<Series<String, int>> get rndSeries
+  static List<Series<String, int>> get rndSeries
   {
     const colors = [ Colors.red, Colors.green, Colors.blue, Colors.amber ];
     final n = names.toList();
@@ -78,7 +79,23 @@ class _ChartListPageState extends State<ChartListPage>
   void initState()
   {
     super.initState();
-    _data = List.generate(100, (_) => rndSeries);
+    prepare();
+  }
+
+  Future<void> prepare() async
+  {
+    final data = await compute(
+      (_) => List.generate(100, (_) => rndSeries),
+      null,
+    );
+    _data = data;
+    final body = Scrollbar(
+      // child: await buildFullListView(),
+      child: buildGenerativeListView(),
+    );
+    setState(() {
+      _body = body;
+    });
   }
 
   @override
@@ -86,42 +103,39 @@ class _ChartListPageState extends State<ChartListPage>
   {
     return Scaffold(
       appBar: AppBar(title: const Text('List of bar charts')),
-      body: Scrollbar(
-        // child: buildFullListView(context),
-        child: buildGenerativeListView(context),
-      ),
+      body: _body ?? const Center(child: CircularProgressIndicator()),
     );
   }
 
-  Widget buildFullListView(final BuildContext context)
+  Future<Widget> buildFullListView() async
   {
-    return SingleChildScrollView(child: Column(
-      children: List.generate(_data.length, (i) => buildCard(context, i)),
-    ));
+    final children = <Widget>[];
+    for (var i = 0; i < _data!.length; ++i) {
+      children.add(buildCard(i));
+      await Future(() {});
+    }
+    return SingleChildScrollView(child: Column(children: children));
   }
 
-  Widget buildGenerativeListView(final BuildContext context)
+  Widget buildGenerativeListView()
   {
     return ListView.builder(
-      itemCount: _data.length,
-      itemBuilder: (context, index) => buildCard(context, index),
+      itemCount: _data!.length,
+      itemBuilder: (context, index) => buildCard(index),
     );
   }
 
-  Widget buildCard(final BuildContext context, final int index)
+  Widget buildCard(final int index)
   {
     final number = NumberFormat.compact(locale: 'ru');
     return Card(
       child: SizedBox(
         height: 200,
         child: StackedBarChart(
-          data: _data[index],
+          data: _data![index],
           measureFormatter: number.format,
           valueAxis: Axis.vertical,
           inverted: false,
-          // crossAxisLabelsOffset: 4.0,
-          // crossAxisWidth: 70,
-          // minTickSpacing: 50,
           barPadding: 10,
           barSpacing: 10,
           padding: const EdgeInsets.all(16.0),
@@ -131,5 +145,6 @@ class _ChartListPageState extends State<ChartListPage>
     );
   }
 
-  late final List<List<Series<String, int>>> _data;
+  List<List<Series<String, int>>>? _data;
+  Widget? _body;
 }

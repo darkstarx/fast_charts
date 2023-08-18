@@ -8,16 +8,15 @@ import 'package:flutter/widgets.dart';
 import '../label_position.dart';
 import '../ticks_resolver.dart';
 import '../types.dart';
-import 'stacked_data.dart';
+import 'bar_data.dart';
 
 
 class BarPainter extends CustomPainter
 {
-  final BarChartStacks data;
+  final ChartBars data;
   final ValueListenable<double>? animation;
   final TicksResolver ticksResolver;
   final MeasureFormatter? measureFormatter;
-  final bool showZeroValues;
   final TextStyle mainAxisTextStyle;
   final TextStyle crossAxisTextStyle;
   final Color axisColor;
@@ -32,6 +31,7 @@ class BarPainter extends CustomPainter
   final bool showCrossAxisLine;
   final double barPadding;
   final double barSpacing;
+  final double groupSpacing;
   final EdgeInsets padding;
 
   BarPainter({
@@ -39,7 +39,6 @@ class BarPainter extends CustomPainter
     this.animation,
     required this.ticksResolver,
     this.measureFormatter,
-    this.showZeroValues = false,
     required this.mainAxisTextStyle,
     required this.crossAxisTextStyle,
     required this.axisColor,
@@ -54,6 +53,7 @@ class BarPainter extends CustomPainter
     this.showCrossAxisLine = true,
     this.barPadding = 0.0,
     this.barSpacing = 0.0,
+    this.groupSpacing = 0.0,
     this.padding = EdgeInsets.zero,
   })
   : super(repaint: animation);
@@ -88,22 +88,14 @@ class BarPainter extends CustomPainter
       final (offset, paragraph) = label;
       canvas.drawParagraph(paragraph, offset);
     }
-    final segments = _stacks = _getStacks(layoutData);
-    for (final entry in segments.entries) {
-      final stack = entry.value;
-      final clip = !stack.clipRRect.isRect;
-      if (stack.segments.isEmpty) continue;
-      if (clip) {
-        canvas.save();
-        canvas.clipRRect(stack.clipRRect);
-      }
-      for (final entry in stack.segments.entries) {
-        final segment = entry.value;
-        final (rect, paint) = segment;
-        canvas.drawRect(rect, paint);
-      }
-      if (clip) {
-        canvas.restore();
+    final barGroups = _barGroups = _getBars(layoutData);
+    for (final entry in barGroups.entries) {
+      final barGroup = entry.value;
+      if (barGroup.bars.isEmpty) continue;
+      for (final entry in barGroup.bars.entries) {
+        final bar = entry.value;
+        final (rect, paint) = bar;
+        canvas.drawRRect(rect, paint);
       }
     }
     if (animation == null) {
@@ -120,7 +112,6 @@ class BarPainter extends CustomPainter
     final needRepaint = data != oldDelegate.data
       || ticksResolver != oldDelegate.ticksResolver
       || measureFormatter != oldDelegate.measureFormatter
-      || showZeroValues != oldDelegate.showZeroValues
       || mainAxisTextStyle != oldDelegate.mainAxisTextStyle
       || crossAxisTextStyle != oldDelegate.crossAxisTextStyle
       || axisColor != oldDelegate.axisColor
@@ -138,7 +129,7 @@ class BarPainter extends CustomPainter
       || padding != oldDelegate.padding
     ;
     if (needRepaint) {
-      _oldStacks = oldDelegate._stacks;
+      _oldBarGroups = oldDelegate._barGroups;
       _layoutData = null;
     }
     return needRepaint;
@@ -150,111 +141,107 @@ class BarPainter extends CustomPainter
     return false;
   }
 
-  Map<int, _LayoutStack> _getStacks(final _LayoutData layoutData)
+  Map<int, _LayoutBarGroup> _getBars(final _LayoutData layoutData)
   {
     if (animation == null) {
-      return layoutData.stacks;
+      return layoutData.barGroups;
     } else {
-      final result = <int, _LayoutStack>{};
-      for (final entry in layoutData.stacks.entries) {
-        final stackId = entry.key;
-        final stack = entry.value;
-        final oldStack = _oldStacks?[stackId];
-        final oldSegments = oldStack?.segments ?? {};
-        final anyOldSegment = oldSegments.isEmpty
+      final result = <int, _LayoutBarGroup>{};
+      for (final entry in layoutData.barGroups.entries) {
+        final groupId = entry.key;
+        final group = entry.value;
+        final oldGroup = _oldBarGroups?[groupId];
+        final oldBars = oldGroup?.bars ?? {};
+        final anyOldBar = oldBars.isEmpty
           ? null
-          : oldSegments.values.first;
-        final rrect = oldStack == null
-          ? stack.clipRRect
-          : RRect.lerp(oldStack.clipRRect, stack.clipRRect, animation!.value)!;
-        final layoutStack = result.putIfAbsent(stackId,
-          () => _LayoutStack.empty(),
+          : oldBars.values.first;
+        final layoutStack = result.putIfAbsent(groupId,
+          () => _LayoutBarGroup.empty(),
         );
-        Rect? stackRect;
-        for (final entry in stack.segments.entries) {
-          final segmentId = entry.key;
-          final segment = entry.value;
-          final (newRect, newPaint) = segment;
-          var oldSegment = oldSegments[segmentId];
-          if (oldSegment == null) {
-            final (dRect, _) = anyOldSegment ?? segment;
+        for (final entry in group.bars.entries) {
+          final barId = entry.key;
+          final bar = entry.value;
+          final (newRect, newPaint) = bar;
+          var oldBar = oldBars[barId];
+          if (oldBar == null) {
+            final (dRect, _) = anyOldBar ?? bar;
             switch (data.valueAxis) {
               case Axis.horizontal:
-                oldSegment = (
-                  Rect.fromLTRB(
+                oldBar = (
+                  RRect.fromLTRBAndCorners(
                     layoutData.crossAxisOffset, dRect.top,
                     layoutData.crossAxisOffset, dRect.bottom,
+                    topLeft: dRect.tlRadius,
+                    topRight: dRect.trRadius,
+                    bottomLeft: dRect.blRadius,
+                    bottomRight: dRect.brRadius,
                   ),
                   newPaint
                 );
                 break;
               case Axis.vertical:
-                oldSegment = (
-                  Rect.fromLTRB(
+                oldBar = (
+                  RRect.fromLTRBAndCorners(
                     dRect.left, layoutData.crossAxisOffset,
                     dRect.right, layoutData.crossAxisOffset,
+                    topLeft: dRect.tlRadius,
+                    topRight: dRect.trRadius,
+                    bottomLeft: dRect.blRadius,
+                    bottomRight: dRect.brRadius,
                   ),
                   newPaint
                 );
                 break;
             }
           }
-          final (oldRect, oldPaint) = oldSegment;
-          final rect = Rect.lerp(oldRect, newRect, animation!.value)!;
+          final (oldRect, oldPaint) = oldBar;
+          final rect = RRect.lerp(oldRect, newRect, animation!.value)!;
           final paint = Paint()
             ..color = Color.lerp(oldPaint.color, newPaint.color,
                 animation!.value
               )!
             ..style = PaintingStyle.fill
           ;
-          if (stackRect == null) {
-            stackRect = rect;
-          } else {
-            stackRect = stackRect.expandToInclude(rect);
-          }
-          layoutStack.segments[segmentId] = (rect, paint);
+          layoutStack.bars[barId] = (rect, paint);
         }
-        final anyNewSegment = stack.segments.isEmpty
+        final anyNewSegment = group.bars.isEmpty
           ? null
-          : stack.segments.values.first;
-        for (final entry in oldSegments.entries.where(
-          (e) => !stack.segments.containsKey(e.key)
+          : group.bars.values.first;
+        for (final entry in oldBars.entries.where(
+          (e) => !group.bars.containsKey(e.key)
         )) {
           final segmentId = entry.key;
           final oldSegment = entry.value;
           final (oldRect, oldPaint) = oldSegment;
           final (dRect, _) = anyNewSegment ?? oldSegment;
-          final Rect newRect;
+          final RRect newRect;
           switch (data.valueAxis) {
             case Axis.horizontal:
-              newRect = Rect.fromLTRB(
+              newRect = RRect.fromLTRBAndCorners(
                 layoutData.crossAxisOffset, dRect.top,
                 layoutData.crossAxisOffset, dRect.bottom,
+                topLeft: dRect.tlRadius,
+                topRight: dRect.trRadius,
+                bottomLeft: dRect.blRadius,
+                bottomRight: dRect.brRadius,
               );
               break;
             case Axis.vertical:
-              newRect = Rect.fromLTRB(
+              newRect = RRect.fromLTRBAndCorners(
                 dRect.left, layoutData.crossAxisOffset,
                 dRect.right, layoutData.crossAxisOffset,
+                topLeft: dRect.tlRadius,
+                topRight: dRect.trRadius,
+                bottomLeft: dRect.blRadius,
+                bottomRight: dRect.brRadius,
               );
               break;
           }
-          final rect = Rect.lerp(oldRect, newRect, animation!.value)!;
-          if (stackRect == null) {
-            stackRect = rect;
-          } else {
-            stackRect = stackRect.expandToInclude(rect);
-          }
-          layoutStack.segments[segmentId] = (rect, oldPaint);
+          final rect = RRect.lerp(oldRect, newRect, animation!.value)!;
+          layoutStack.bars[segmentId] = (rect, oldPaint);
         }
-        result[stackId] = _LayoutStack(
-          segments: layoutStack.segments,
-          clipRRect: RRect.fromRectAndCorners(stackRect!,
-            topLeft: rrect.tlRadius,
-            bottomLeft: rrect.blRadius,
-            topRight: rrect.trRadius,
-            bottomRight: rrect.brRadius,
-          )
+        result[groupId] = _LayoutBarGroup(
+          bars: layoutStack.bars,
         );
       }
       return result;
@@ -284,13 +271,13 @@ class BarPainter extends CustomPainter
     }
     final domainLabels = <ui.Paragraph>[];
     var domainMaxSize = Size.zero;
-    for (final stack in data.stacks) {
+    for (final group in data.groups) {
       final labelBuilder = ui.ParagraphBuilder(ui.ParagraphStyle(
         textDirection: TextDirection.ltr,
         textAlign: domainTextAlign,
       ));
       labelBuilder.pushStyle(mainAxisTextStyle.getTextStyle());
-      labelBuilder.addText(stack.domain);
+      labelBuilder.addText(group.domain);
       final label = labelBuilder.build();
       label.layout(ui.ParagraphConstraints(width: crossLabelWidth));
       domainMaxSize = Size(
@@ -316,8 +303,8 @@ class BarPainter extends CustomPainter
         crossAxisSize = innerRect.width;
         break;
     }
-    var dataExtremes = data.stacks
-      .map((e) => e.summs)
+    var dataExtremes = data.groups
+      .map((e) => e.extremes)
       .fold(
         (lower: 0.0, upper: 0.0),
         (minmax, lowerupper) => (
@@ -448,13 +435,14 @@ class BarPainter extends CustomPainter
         crossAxisSize
         - mainAxisField
         - barPadding * 2
-        - (barSpacing * (data.stacks.length - 1))
-      ) / data.stacks.length,
+        - (groupSpacing * (data.groups.length - 1))
+        - data.groups.fold(0.0, (s, g) => s + barSpacing * (g.bars.length - 1))
+      ) / data.groups.fold(0, (s, g) => s + g.bars.length),
     );
 
     final double upperMainZeroOffset;
     final double lowerMainZeroOffset;
-    final double zeroOnMainAxis;
+    final double crossAxisOffset;
     double crossOffset;
     switch (data.valueAxis) {
       case Axis.horizontal:
@@ -464,7 +452,7 @@ class BarPainter extends CustomPainter
         lowerMainZeroOffset = data.inverted
           ? upperPixels + innerRect.left + crossAxisField
           : upperPixels - innerRect.left - crossAxisField;
-        zeroOnMainAxis = data.inverted
+        crossAxisOffset = data.inverted
           ? lowerMainZeroOffset
           : upperMainZeroOffset;
         crossOffset = innerRect.top + barPadding;
@@ -476,99 +464,59 @@ class BarPainter extends CustomPainter
         lowerMainZeroOffset = data.inverted
           ? upperPixels - innerRect.top
           : upperPixels + innerRect.top;
-        zeroOnMainAxis = data.inverted
+        crossAxisOffset = data.inverted
           ? upperMainZeroOffset
           : lowerMainZeroOffset;
         crossOffset = innerRect.left + mainAxisField + barPadding;
         break;
     }
-    for (var i = 0; i < data.stacks.length; ++i) {
-      final stack = data.stacks[i];
+    for (var i = 0; i < data.groups.length; ++i) {
+      final group = data.groups[i];
       final domainLabel = domainLabels[i];
-      final List<(int, BarChartSegment)> lowerSegments, upperSegments;
-      if (showZeroValues) {
-        final divided = stack.dividedSegments;
-        lowerSegments = divided.lower;
-        upperSegments = divided.zero.followedBy(divided.upper).toList();
-      } else {
-        final divided = stack.dividedSegments;
-        lowerSegments = divided.lower;
-        upperSegments = divided.upper;
-      }
-      final barMargin = (
-        start: i == 0 ? barPadding : barSpacing / 2,
-        end: i == data.stacks.length - 1 ? barPadding : barSpacing / 2,
+
+      final groupThickness = barThickness * group.bars.length
+        + barSpacing * (group.bars.length - 1);
+      final groupMargin = (
+        start: i == 0 ? barPadding : groupSpacing / 2,
+        end: i == data.groups.length - 1 ? barPadding : groupSpacing / 2,
       );
-      final startRadius = upperSegments.isEmpty
-        ? Radius.zero
-        : stack.radius;
-      final endRadius = lowerSegments.isEmpty
-        ? Radius.zero
-        : stack.radius;
-      final BorderRadius borderRadius;
-      switch (data.valueAxis) {
-        case Axis.horizontal:
-          borderRadius = BorderRadius.horizontal(
-            left: data.inverted ? startRadius : endRadius,
-            right: data.inverted ? endRadius : startRadius,
-          );
-          break;
-        case Axis.vertical:
-          borderRadius = BorderRadius.vertical(
-            top: data.inverted ? endRadius : startRadius,
-            bottom: data.inverted ? startRadius : endRadius,
-          );
-          break;
-      }
-      _buildSections(layoutData,
-        stackIndex: i,
-        segments: upperSegments,
+      _buildGroupBars(layoutData,
+        groupIndex: i,
+        bars: group.bars,
         valueAxis: data.valueAxis,
         inverted: data.inverted,
         dataRange: dataRange,
         mainAxisSize: mainAxisSize,
-        mainZeroOffset: upperMainZeroOffset,
+        crossAxisOffset: crossAxisOffset,
         crossOffset: crossOffset,
         barThickness: barThickness,
-        barMargin: barMargin,
+        barSpacing: barSpacing,
+        groupMargin: groupMargin,
       );
-      _buildSections(layoutData,
-        stackIndex: i,
-        segments: lowerSegments,
-        valueAxis: data.valueAxis,
-        inverted: !data.inverted,
-        dataRange: dataRange,
-        mainAxisSize: mainAxisSize,
-        mainZeroOffset: lowerMainZeroOffset,
-        crossOffset: crossOffset,
-        barThickness: barThickness,
-        barMargin: barMargin,
-      );
-      final layoutStack = layoutData.stacks[i];
-      if (layoutStack != null) {
-        layoutData.stacks[i] = layoutStack.withBorderRadius(borderRadius);
-      }
+
       switch (data.valueAxis) {
         case Axis.horizontal:
           final labelOffset = Offset(
             innerRect.left + crossAxisField - domainLabel.width
               - axisThickness / 2 - crossAxisLabelsOffset,
-            crossOffset + (barThickness - domainLabel.height) / 2,
+            crossOffset + (groupThickness - domainLabel.height) / 2,
           );
           layoutData.crossLabels.add((labelOffset, domainLabel));
           break;
         case Axis.vertical:
           final labelOffset = Offset(
-            crossOffset + (barThickness - domainLabel.width) / 2,
+            crossOffset + (groupThickness - domainLabel.width) / 2,
             innerRect.top + mainAxisSize + axisThickness / 2
               + crossAxisLabelsOffset,
           );
           layoutData.crossLabels.add((labelOffset, domainLabel));
           break;
       }
-      crossOffset += barSpacing + barThickness;
+      crossOffset += groupSpacing
+        + barThickness * group.bars.length
+        + barSpacing * (group.bars.length - 1);
     }
-    return layoutData.copyWith(crossAxisOffset: zeroOnMainAxis);
+    return layoutData.copyWith(crossAxisOffset: crossAxisOffset);
   }
 
   String _formatMeasure(final double measure)
@@ -576,43 +524,55 @@ class BarPainter extends CustomPainter
     return measureFormatter?.call(measure) ?? measure.toStringAsFixed(2);
   }
 
-  static void _buildSections(final _LayoutData layoutData, {
-    required final int stackIndex,
-    required final List<(int, BarChartSegment)> segments,
+  static void _buildGroupBars(final _LayoutData layoutData, {
+    required final int groupIndex,
+    required final List<Bar> bars,
     required final Axis valueAxis,
     required final bool inverted,
     required final double dataRange,
     required final double mainAxisSize,
-    required final double mainZeroOffset,
+    required final double crossAxisOffset,
     required final double crossOffset,
     required final double barThickness,
-    required final ({ double start, double end}) barMargin,
+    required final double barSpacing,
+    required final ({ double start, double end}) groupMargin,
   })
   {
-    final stack = layoutData.stacks.putIfAbsent(stackIndex,
-      () => _LayoutStack.empty(),
+    final group = layoutData.barGroups.putIfAbsent(groupIndex,
+      () => _LayoutBarGroup.empty(),
     );
-    var mainOffset = mainZeroOffset;
-    segments.sort((a, b) => a.$1.compareTo(b.$1));
-    for (final (index, segment) in segments) {
-      final measure = segment.value;
-      final label = segment.label;
-      final sectionLength = measure.abs() / dataRange * mainAxisSize;
+    var offset = crossOffset;
+    for (var index = 0; index < bars.length; ++index) {
+      final bar = bars[index];
+      final isFirst = index == 0;
+      final isLast = index == bars.length - 1;
+      final startMargin = isFirst ? groupMargin.start : barSpacing / 2;
+      final endMargin = isLast ? groupMargin.end : barSpacing / 2;
+      final measure = bar.value;
+      final label = bar.label;
+      final invert = inverted ^ (measure < 0);
+      final barLength = measure.abs() / dataRange * mainAxisSize;
       final paint = Paint()
         ..style = PaintingStyle.fill
-        ..color = segment.color
+        ..color = bar.color
       ;
       switch (valueAxis) {
         case Axis.horizontal:
           final innerRect = Rect.fromLTWH(
-            inverted
-              ? mainAxisSize - mainOffset - sectionLength
-              : mainOffset,
-            crossOffset,
-            sectionLength,
+            invert ? crossAxisOffset - barLength : crossAxisOffset,
+            offset,
+            barLength,
             barThickness,
           );
-          stack.segments[index] = (innerRect, paint);
+          group.bars[index] = (
+            RRect.fromRectAndCorners(innerRect,
+              topRight: invert ? Radius.zero : bar.radius,
+              bottomRight: invert ? Radius.zero : bar.radius,
+              topLeft: invert ? bar.radius : Radius.zero,
+              bottomLeft: invert ? bar.radius : Radius.zero,
+            ),
+            paint,
+          );
           if (label != null) {
             final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle())
               ..pushStyle(label.style.getTextStyle())
@@ -624,7 +584,11 @@ class BarPainter extends CustomPainter
             final lblOffset = label.alignment.inscribe(lblSize, innerRect);
             switch (label.position) {
               case LabelPosition.inside:
-                layoutData.labels.add((lblOffset.topLeft, paragraph));
+                if (lblSize.height <= innerRect.height
+                  && lblSize.width <= innerRect.width
+                ) {
+                  layoutData.labels.add((lblOffset.topLeft, paragraph));
+                }
                 break;
               case LabelPosition.outside:
                 layoutData.labels.add((
@@ -642,19 +606,25 @@ class BarPainter extends CustomPainter
           break;
         case Axis.vertical:
           final innerRect = Rect.fromLTWH(
-            crossOffset,
-            inverted
-              ? mainOffset
-              : mainAxisSize - mainOffset - sectionLength,
+            offset,
+            invert ? crossAxisOffset : crossAxisOffset - barLength,
             barThickness,
-            sectionLength,
+            barLength,
           );
           final rectPadding = EdgeInsets.only(
-            left: barMargin.start,
-            right: barMargin.end,
+            left: startMargin,
+            right: endMargin,
           );
           final outerRect = rectPadding.inflateRect(innerRect);
-          stack.segments[index] = (innerRect, paint);
+          group.bars[index] = (
+            RRect.fromRectAndCorners(innerRect,
+              topLeft: invert ? Radius.zero : bar.radius,
+              topRight: invert ? Radius.zero : bar.radius,
+              bottomLeft: invert ? bar.radius : Radius.zero,
+              bottomRight: invert ? bar.radius : Radius.zero,
+            ),
+            paint,
+          );
           if (label != null) {
             final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle())
               ..pushStyle(label.style.getTextStyle())
@@ -671,7 +641,9 @@ class BarPainter extends CustomPainter
             final lblOffset = label.alignment.inscribe(lblSize, innerRect);
             switch (label.position) {
               case LabelPosition.inside:
-                if (lblSize.height <= innerRect.height) {
+                if (lblSize.height <= innerRect.height
+                  && lblSize.width <= innerRect.width
+                ) {
                   layoutData.labels.add((lblOffset.topLeft, paragraph));
                 }
                 break;
@@ -688,13 +660,13 @@ class BarPainter extends CustomPainter
           }
           break;
       }
-      mainOffset += sectionLength;
+      offset += barThickness + barSpacing;
     }
   }
 
   _LayoutData? _layoutData;
-  Map<int, _LayoutStack>? _stacks;
-  Map<int, _LayoutStack>? _oldStacks;
+  Map<int, _LayoutBarGroup>? _barGroups;
+  Map<int, _LayoutBarGroup>? _oldBarGroups;
 }
 
 
@@ -706,7 +678,7 @@ class _LayoutData
   final List<(Offset, Offset)> guideLines;
   final List<(Offset, ui.Paragraph)> mainLabels;
   final List<(Offset, ui.Paragraph)> crossLabels;
-  final Map<int, _LayoutStack> stacks;
+  final Map<int, _LayoutBarGroup> barGroups;
   final List<(Offset, ui.Paragraph)> labels;
 
   const _LayoutData({
@@ -716,7 +688,7 @@ class _LayoutData
     required this.guideLines,
     required this.mainLabels,
     required this.crossLabels,
-    required this.stacks,
+    required this.barGroups,
     required this.labels,
   });
 
@@ -727,7 +699,7 @@ class _LayoutData
     guideLines: [],
     mainLabels: [],
     crossLabels: [],
-    stacks: {},
+    barGroups: {},
     labels: [],
   );
 
@@ -738,7 +710,7 @@ class _LayoutData
     final List<(Offset, Offset)>? guideLines,
     final List<(Offset, ui.Paragraph)>? mainLabels,
     final List<(Offset, ui.Paragraph)>? crossLabels,
-    final Map<int, _LayoutStack>? stacks,
+    final Map<int, _LayoutBarGroup>? barGroups,
     final List<(Offset, ui.Paragraph)>? labels,
   }) => _LayoutData(
     clipRect: clipRect ?? this.clipRect,
@@ -747,43 +719,21 @@ class _LayoutData
     guideLines: guideLines ?? this.guideLines,
     mainLabels: mainLabels ?? this.mainLabels,
     crossLabels: crossLabels ?? this.crossLabels,
-    stacks: stacks ?? this.stacks,
+    barGroups: barGroups ?? this.barGroups,
     labels: labels ?? this.labels,
   );
 }
 
 
-class _LayoutStack
+class _LayoutBarGroup
 {
-  final Map<int, (Rect, Paint)> segments;
-  final RRect clipRRect;
+  final Map<int, (RRect, Paint)> bars;
 
-  const _LayoutStack({
-    required this.segments,
-    required this.clipRRect,
+  const _LayoutBarGroup({
+    required this.bars,
   });
 
-  factory _LayoutStack.empty() => _LayoutStack(
-    segments: SplayTreeMap(),
-    clipRRect: RRect.zero,
+  factory _LayoutBarGroup.empty() => _LayoutBarGroup(
+    bars: SplayTreeMap(),
   );
-
-  _LayoutStack withBorderRadius(final BorderRadius radius)
-  {
-    if (segments.isEmpty) return this;
-    Rect? clipRect;
-    for (final segment in segments.values) {
-      final (rect, _) = segment;
-      if (clipRect == null) {
-        clipRect = rect;
-      } else {
-        clipRect = clipRect.expandToInclude(rect);
-      }
-    }
-    assert(clipRect != null);
-    return _LayoutStack(
-      segments: segments,
-      clipRRect: radius.toRRect(clipRect!),
-    );
-  }
 }

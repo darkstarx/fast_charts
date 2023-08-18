@@ -1,21 +1,19 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'bar_chart/bar_data.dart';
+import 'bar_chart/painter.dart';
 import 'bar_chart/ticks_resolver.dart';
-import 'stacked_bar_chart/stacked_data.dart';
-import 'stacked_bar_chart/painter.dart';
-import 'series.dart';
 import 'types.dart';
+import 'series.dart';
 
 
-/// Shows several series of data as stacked bars.
+/// Shows several series of data as groups of bars.
 ///
 /// All series must contain data of the same type. It is not necessary for each
 /// series to contain the same set of domains, if there is no value for some of
 /// domains in some series, the series may not contain the value of this domain.
-///
-/// The width of bars depends on quantity and the entire width of the diagram.
-class StackedBarChart<D, T> extends StatefulWidget
+class BarChart<D, T> extends StatefulWidget
 {
   /// The list of series to be shown.
   final List<Series<D, T>> data;
@@ -33,13 +31,12 @@ class StackedBarChart<D, T> extends StatefulWidget
   /// vertically, otherwise - horizontally.
   final Axis valueAxis;
 
-  /// Whether to show zero segments of bar.
+  /// Whether to show zero bars.
   ///
   /// When the measure value is zero, the diagram doesn't show corresponding
-  /// segment on the bar. If the segment isn't shown, it's label is hidden as
-  /// well.
+  /// bar. If the bar isn't shown, it's label is hidden as well.
   ///
-  /// It can be useful to show zero segments when it's necessary to show
+  /// It can be useful to show zero bars when it's necessary to show
   /// corresponding labels, e.g. when labels show something essential besides
   /// zeroes.
   ///
@@ -109,7 +106,12 @@ class StackedBarChart<D, T> extends StatefulWidget
   /// It's `64.0` by default.
   final double minTickSpacing;
 
-  /// The spacing between bars.
+  /// The spacing between groups of bars.
+  ///
+  /// It's zero by default.
+  final double groupSpacing;
+
+  /// The spacing between bars in a group.
   ///
   /// It's zero by default.
   final double barSpacing;
@@ -138,7 +140,7 @@ class StackedBarChart<D, T> extends StatefulWidget
   /// If zero, the change occurs without animation.
   final Duration animationDuration;
 
-  const StackedBarChart({
+  const BarChart({
     super.key,
     required this.data,
     this.domainFormatter,
@@ -161,6 +163,7 @@ class StackedBarChart<D, T> extends StatefulWidget
     this.showCrossAxisLine = true,
     this.minTickSpacing = 64.0,
 
+    this.groupSpacing = 0.0,
     this.barSpacing = 0.0,
     this.barPadding = 0.0,
 
@@ -170,11 +173,11 @@ class StackedBarChart<D, T> extends StatefulWidget
   });
 
   @override
-  State<StackedBarChart> createState() => _StackedBarChartState<D, T>();
+  State<BarChart> createState() => _BarChartState<D, T>();
 }
 
 
-class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
+class _BarChartState<D, T> extends State<BarChart<D, T>>
   with SingleTickerProviderStateMixin
 {
   @override
@@ -191,9 +194,10 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
         _onAnimationDone();
       }
     });
-    _stacks = _stacksFromSeries(widget.data,
+    _groups = _barsFromSeries(widget.data,
       domainFormatter: widget.domainFormatter,
       valueAxis: widget.valueAxis,
+      showZeroValues: widget.showZeroValues,
       inverted: widget.inverted,
       radius: widget.radius,
     );
@@ -207,7 +211,7 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
   }
 
   @override
-  void didUpdateWidget(covariant StackedBarChart<D, T> oldWidget)
+  void didUpdateWidget(covariant BarChart<D, T> oldWidget)
   {
     if (widget.minTickSpacing != oldWidget.minTickSpacing) {
       _ticksResolver = BarTicksResolver(minSpacing: widget.minTickSpacing);
@@ -218,16 +222,17 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
     if (widget.data != oldWidget.data
       || widget.domainFormatter != oldWidget.domainFormatter
       || widget.valueAxis != oldWidget.valueAxis
+      || widget.showZeroValues != oldWidget.showZeroValues
       || widget.inverted != oldWidget.inverted
       || widget.radius != oldWidget.radius
     ) {
-      final newStacks = _stacksFromSeries(widget.data,
+      _groups = _barsFromSeries(widget.data,
         domainFormatter: widget.domainFormatter,
         valueAxis: widget.valueAxis,
+        showZeroValues: widget.showZeroValues,
         inverted: widget.inverted,
         radius: widget.radius,
       );
-      _stacks = newStacks;
       if (widget.data != oldWidget.data
         && widget.animationDuration > Duration.zero
       ) {
@@ -247,11 +252,10 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
     return LayoutBuilder(builder: (context, constraints) => CustomPaint(
       size: constraints.biggest,
       painter: BarPainter(
-        data: _stacks,
+        data: _groups,
         animation: _controller.isAnimating ? _controller : null,
         ticksResolver: _ticksResolver,
         measureFormatter: widget.measureFormatter,
-        showZeroValues: widget.showZeroValues,
         mainAxisTextStyle: widget.mainAxisTextStyle ?? TextStyle(
           fontSize: 12.0,
           color: theme.colorScheme.onSurface,
@@ -273,6 +277,7 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
         showCrossAxisLine: widget.showCrossAxisLine,
         barPadding: widget.barPadding,
         barSpacing: widget.barSpacing,
+        groupSpacing: widget.groupSpacing,
         padding: widget.padding,
       ),
     ));
@@ -294,16 +299,17 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
     setState(() {});
   }
 
-  static BarChartStacks _stacksFromSeries<D, T>(
+  static ChartBars _barsFromSeries<D, T>(
     final List<Series<D, T>> data, {
       final DomainFormatter<D>? domainFormatter,
       required final Axis valueAxis,
+      required final bool showZeroValues,
       required final bool inverted,
       required final Radius radius,
     }
   )
   {
-    final stacks = <D, BarChartStack>{};
+    final groups = <D, BarsGroup>{};
     for (final series in data) {
       for (final entry in series.data.entries) {
         final measure = series.measureAccessor(entry.value);
@@ -311,29 +317,31 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
         final domainLabel = domainFormatter == null
           ? domain.toString()
           : domainFormatter(domain);
-        final stack = stacks.putIfAbsent(domain, () => BarChartStack(
+        final group = groups.putIfAbsent(domain, () => BarsGroup(
           domain: domainLabel,
-          segments: [],
-          radius: radius,
+          bars: [],
         ));
+        if (!showZeroValues && measure == 0.0) continue;
         final label = series.labelAccessor == null
           ? null
           : series.labelAccessor!(entry.value);
-        stack.segments.add(BarChartSegment(
+        group.bars.add(Bar(
           value: measure,
           color: series.color,
+          radius: radius,
           label: label,
         ));
       }
     }
-    return BarChartStacks(
-      stacks: stacks.values.toList(),
+    groups.removeWhere((key, value) => value.bars.isEmpty);
+    return ChartBars(
+      groups: groups.values.toList(),
       valueAxis: valueAxis,
       inverted: inverted,
     );
   }
 
   late BarTicksResolver _ticksResolver;
-  late BarChartStacks _stacks;
+  late ChartBars _groups;
   late AnimationController _controller;
 }

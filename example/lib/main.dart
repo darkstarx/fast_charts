@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'pages/list.dart';
-import 'pages/single.dart';
+import 'pages/bar_single.dart';
+import 'pages/stacked_bar_list.dart';
+import 'pages/stacked_bar_single.dart';
 
 
 void main()
@@ -23,8 +24,9 @@ class MyApp extends StatelessWidget
       themeMode: ThemeMode.system,
       routes: {
         '/example': (context) => const ExamplePage(),
-        '/example/single': (context) => const SingleChartPage(),
-        '/example/list': (context) => const ChartListPage(),
+        '/example/bar/single': (context) => const BarSinglePage(),
+        '/example/stacked/single': (context) => const StackedBarSinglePage(),
+        '/example/stacked/list': (context) => const StackedBarListPage(),
       },
       initialRoute: '/example',
     );
@@ -44,19 +46,32 @@ class ExamplePage extends StatelessWidget
       body: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pushNamed('/example/single'),
-                child: const Text('Single bar chart'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pushNamed('/example/list'),
-                child: const Text('List of bar charts'),
-              ),
-            ],
+          child: SizedBox(
+            width: 320,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pushNamed(
+                    '/example/bar/single',
+                  ),
+                  child: const Text('Single bar chart'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pushNamed(
+                    '/example/stacked/single',
+                  ),
+                  child: const Text('Single stacked bar chart'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pushNamed(
+                    '/example/stacked/list',
+                  ),
+                  child: const Text('List of stacked bar charts'),
+                ),
+              ],
+            ),
           ),
         ),
       ),

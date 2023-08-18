@@ -1,22 +1,19 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "bar_charts",
+            "name": "fast_charts",
             "request": "launch",
             "type": "dart"
         },
         {
-            "name": "bar_charts (profile mode)",
+            "name": "fast_charts (profile mode)",
             "request": "launch",
             "type": "dart",
             "flutterMode": "profile"
         },
         {
-            "name": "bar_charts (release mode)",
+            "name": "fast_charts (release mode)",
             "request": "launch",
             "type": "dart",
             "flutterMode": "release"

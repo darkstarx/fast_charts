@@ -1,22 +1,22 @@
 import 'dart:math';
 
-import 'package:bar_charts/bar_charts.dart';
+import 'package:fast_charts/fast_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 
-class SingleChartPage extends StatefulWidget
+class StackedBarSinglePage extends StatefulWidget
 {
-  const SingleChartPage({ super.key });
+  const StackedBarSinglePage({ super.key });
 
   @override
-  State<SingleChartPage> createState() => _SingleChartPageState();
+  State<StackedBarSinglePage> createState() => _StackedBarSinglePageState();
 }
 
 
 typedef Data<D, T> = List<Series<D, T>>;
 
-class _SingleChartPageState extends State<SingleChartPage>
+class _StackedBarSinglePageState extends State<StackedBarSinglePage>
 {
   static final random = Random();
 
@@ -61,7 +61,7 @@ class _SingleChartPageState extends State<SingleChartPage>
   static final data2 = data1.indexed.map((r) => Series<String, int>(
     data: r.$2.data.map((key, value) => MapEntry(
       key,
-      (value * random.nextDouble()).round(),
+      value < 0 ? (value * random.nextDouble() / 2).round() : value,
       // rndInt,
     )),
     color: colors2[r.$1],
