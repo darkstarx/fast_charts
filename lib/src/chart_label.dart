@@ -17,4 +17,6 @@ class ChartLabel
   });
 }
 
-typedef LabelAccessor<T> = ChartLabel? Function(T value);
+typedef LabelAccessor<D, T> = ChartLabel? Function(
+  D domain, T value, double percent,
+);

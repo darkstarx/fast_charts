@@ -42,7 +42,7 @@ class _BarSinglePageState extends State<BarSinglePage>
     Color(0xFFF48FB1),
     Color(0xFF69F0AE),
     Color(0xFF82B1FF),
-    Color(0xFFFFD740),
+    Color(0xFFFFFF00),
   ];
   static const colors2 = [
     Color(0xFFF44336),
@@ -53,9 +53,9 @@ class _BarSinglePageState extends State<BarSinglePage>
 
   static final data1 = colors1.map((color) => Series<String, int>(
     data: { for (final d in domains) d: rndInt },
-    color: color,
+    colorAccessor: (d, v) => color,
     measureAccessor: getMeasure,
-    labelAccessor: (value) => getLabel(value, color),
+    labelAccessor: (domain, value, percent) => getLabel(value, color),
   )).toList();
 
   static final data2 = data1.indexed.map((r) => Series<String, int>(
@@ -65,38 +65,10 @@ class _BarSinglePageState extends State<BarSinglePage>
       // random.nextDouble() > 0.7 ? 0 : value,
       // rndInt,
     )),
-    color: colors2[r.$1],
+    colorAccessor: (d, v) => colors2[r.$1],
     measureAccessor: getMeasure,
-    labelAccessor: (value) => getLabel(value, colors2[r.$1]),
+    labelAccessor: (domain, value, percent) => getLabel(value, colors2[r.$1]),
   )).toList();
-
-  // static final data2 = data1.map((s) => Series<String, int>(
-  //   data: s.data.map((key, value) => MapEntry(
-  //     key,
-  //     (value * random.nextDouble()).round(),
-  //   )),
-  //   color: s.color,
-  //   measureAccessor: s.measureAccessor,
-  //   labelAccessor: s.labelAccessor,
-  // )).toList();
-
-  // static final data2 = colors.followedBy([ Colors.purple ])
-  //   .map((color) => Series<String, int>(
-  //     data: { for (final d in domains) d: rndInt },
-  //     color: color,
-  //     measureAccessor: getMeasure,
-  //     labelAccessor: (value) => getLabel(value, color),
-  //   ))
-  //   .toList();
-
-  // static final data2 = colors.followedBy([ Colors.purple ])
-  //   .map((color) => Series<String, int>(
-  //     data: { for (final d in domains.followedBy([ 'zeta' ])) d: rndInt },
-  //     color: color,
-  //     measureAccessor: getMeasure,
-  //     labelAccessor: (value) => getLabel(value, color),
-  //   ))
-  //   .toList();
 
   static double getMeasure(final int value) => value.toDouble();
 
@@ -126,8 +98,8 @@ class _BarSinglePageState extends State<BarSinglePage>
   Widget build(final BuildContext context)
   {
     return Scaffold(
-      appBar: AppBar(title: const Text('Single chart')),
-      body: buildCard(context, data1),
+      appBar: AppBar(title: const Text('Single bar chart')),
+      body: card,
       floatingActionButton: FloatingActionButton(
         onPressed: () => setState(() {
           _data = _data == data1 ? data2 : data1;
@@ -137,7 +109,7 @@ class _BarSinglePageState extends State<BarSinglePage>
     );
   }
 
-  Widget buildCard(final BuildContext context, final Data<String, int> data)
+  Widget get card
   {
     final number = NumberFormat.compact(locale: 'ru');
     return Card(

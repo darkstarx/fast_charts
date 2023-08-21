@@ -61,15 +61,20 @@ class _StackedBarListPageState extends State<StackedBarListPage>
 
   static List<Series<String, int>> get rndSeries
   {
-    const colors = [ Colors.red, Colors.green, Colors.blue, Colors.amber ];
+    const colors = [
+      Color(0xFFF48FB1),
+      Color(0xFF69F0AE),
+      Color(0xFF82B1FF),
+      Color(0xFFFFFF00),
+    ];
     final n = names.toList();
     final d = List.generate(5, (_) => n.removeAt(random.nextInt(n.length)));
     final result = colors
       .map((color) => Series(
         data: { for (final domain in d) domain: rndInt },
-        color: color,
+        colorAccessor: (d, v) => color,
         measureAccessor: getMeasure,
-        labelAccessor: (value) => getLabel(value, color),
+        labelAccessor: (domain, value, percent) => getLabel(value, color),
       ))
       .toList();
     return result;
@@ -102,7 +107,7 @@ class _StackedBarListPageState extends State<StackedBarListPage>
   Widget build(final BuildContext context)
   {
     return Scaffold(
-      appBar: AppBar(title: const Text('List of bar charts')),
+      appBar: AppBar(title: const Text('List of stacked bar charts')),
       body: _body ?? const Center(child: CircularProgressIndicator()),
     );
   }

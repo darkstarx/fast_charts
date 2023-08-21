@@ -6,6 +6,7 @@ import 'stacked_bar_chart/stacked_data.dart';
 import 'stacked_bar_chart/painter.dart';
 import 'series.dart';
 import 'types.dart';
+import 'utils.dart';
 
 
 /// Shows several series of data as stacked bars.
@@ -305,9 +306,15 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
   {
     final stacks = <D, BarChartStack>{};
     for (final series in data) {
+      final percents = calcPercents(series.data.values
+        .map((value) => series.measureAccessor(value))
+        .toList()
+      );
+      var index = 0;
       for (final entry in series.data.entries) {
-        final measure = series.measureAccessor(entry.value);
         final domain = entry.key;
+        final value = entry.value;
+        final measure = series.measureAccessor(value);
         final domainLabel = domainFormatter == null
           ? domain.toString()
           : domainFormatter(domain);
@@ -318,12 +325,13 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
         ));
         final label = series.labelAccessor == null
           ? null
-          : series.labelAccessor!(entry.value);
+          : series.labelAccessor!(domain, value, percents[index]);
         stack.segments.add(BarChartSegment(
           value: measure,
-          color: series.color,
+          color: series.colorAccessor(domain, value),
           label: label,
         ));
+        ++index;
       }
     }
     return BarChartStacks(

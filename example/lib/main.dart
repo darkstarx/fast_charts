@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'pages/bar_single.dart';
+import 'pages/pie_single.dart';
 import 'pages/stacked_bar_list.dart';
 import 'pages/stacked_bar_single.dart';
 
@@ -27,6 +28,7 @@ class MyApp extends StatelessWidget
         '/example/bar/single': (context) => const BarSinglePage(),
         '/example/stacked/single': (context) => const StackedBarSinglePage(),
         '/example/stacked/list': (context) => const StackedBarListPage(),
+        '/example/pie/single': (context) => const PieSinglePage(),
       },
       initialRoute: '/example',
     );
@@ -69,6 +71,12 @@ class ExamplePage extends StatelessWidget
                     '/example/stacked/list',
                   ),
                   child: const Text('List of stacked bar charts'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pushNamed(
+                    '/example/pie/single',
+                  ),
+                  child: const Text('Single pie chart'),
                 ),
               ],
             ),

@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import 'bar_chart/bar_data.dart';
 import 'bar_chart/painter.dart';
 import 'bar_chart/ticks_resolver.dart';
-import 'types.dart';
 import 'series.dart';
+import 'types.dart';
+import 'utils.dart';
 
 
 /// Shows several series of data as groups of bars.
@@ -211,7 +212,7 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
   }
 
   @override
-  void didUpdateWidget(covariant BarChart<D, T> oldWidget)
+  void didUpdateWidget(final BarChart<D, T> oldWidget)
   {
     if (widget.minTickSpacing != oldWidget.minTickSpacing) {
       _ticksResolver = BarTicksResolver(minSpacing: widget.minTickSpacing);
@@ -311,9 +312,15 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
   {
     final groups = <D, BarsGroup>{};
     for (final series in data) {
+      final percents = calcPercents(series.data.values
+        .map((value) => series.measureAccessor(value))
+        .toList()
+      );
+      var index = 0;
       for (final entry in series.data.entries) {
-        final measure = series.measureAccessor(entry.value);
         final domain = entry.key;
+        final value = entry.value;
+        final measure = series.measureAccessor(value);
         final domainLabel = domainFormatter == null
           ? domain.toString()
           : domainFormatter(domain);
@@ -321,16 +328,18 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
           domain: domainLabel,
           bars: [],
         ));
-        if (!showZeroValues && measure == 0.0) continue;
-        final label = series.labelAccessor == null
-          ? null
-          : series.labelAccessor!(entry.value);
-        group.bars.add(Bar(
-          value: measure,
-          color: series.color,
-          radius: radius,
-          label: label,
-        ));
+        if (measure != 0.0 || showZeroValues) {
+          final label = series.labelAccessor == null
+            ? null
+            : series.labelAccessor!(domain, value, percents[index]);
+          group.bars.add(Bar(
+            value: measure,
+            color: series.colorAccessor(domain, value),
+            radius: radius,
+            label: label,
+          ));
+        }
+        ++index;
       }
     }
     groups.removeWhere((key, value) => value.bars.isEmpty);

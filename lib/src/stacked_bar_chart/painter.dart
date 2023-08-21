@@ -61,6 +61,10 @@ class BarPainter extends CustomPainter
   @override
   void paint(final Canvas canvas, final Size size)
   {
+    if (_lastSize != size) {
+      _lastSize = size;
+      _layoutData = null;
+    }
     final layoutData = _layoutData ??= _buildLayout(size);
     final axisPaint = Paint()
       ..color = axisColor
@@ -140,6 +144,9 @@ class BarPainter extends CustomPainter
     if (needRepaint) {
       _oldStacks = oldDelegate._stacks;
       _layoutData = null;
+    } else {
+      _layoutData = oldDelegate._layoutData;
+      _lastSize = oldDelegate._lastSize;
     }
     return needRepaint;
   }
@@ -693,6 +700,7 @@ class BarPainter extends CustomPainter
   }
 
   _LayoutData? _layoutData;
+  Size? _lastSize;
   Map<int, _LayoutStack>? _stacks;
   Map<int, _LayoutStack>? _oldStacks;
 }
