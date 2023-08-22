@@ -139,6 +139,9 @@ class StackedBarChart<D, T> extends StatefulWidget
   /// If zero, the change occurs without animation.
   final Duration animationDuration;
 
+  /// The curve of the change animation.
+  final Curve animationCurve;
+
   const StackedBarChart({
     super.key,
     required this.data,
@@ -168,6 +171,7 @@ class StackedBarChart<D, T> extends StatefulWidget
     this.padding = EdgeInsets.zero,
     this.radius = Radius.zero,
     this.animationDuration = Duration.zero,
+    this.animationCurve = Curves.easeOut,
   });
 
   @override
@@ -229,13 +233,15 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
         radius: widget.radius,
       );
       _stacks = newStacks;
-      if (widget.data != oldWidget.data
-        && widget.animationDuration > Duration.zero
+      if (widget.animationDuration > Duration.zero
+        && widget.data != oldWidget.data
+        && _dataIsCompatible(oldWidget.data, widget.data)
+        && _dataIsDifferent(widget.data, oldWidget.data)
       ) {
-        final compatible = _checkSeriesCompatibility(oldWidget.data, widget.data);
-        if (compatible) {
-          _controller.forward(from: 0.0);
-        }
+        _controller.forward(from: 0.0);
+        _currentAnimation = _controller.drive(
+          CurveTween(curve: widget.animationCurve),
+        );
       }
     }
     super.didUpdateWidget(oldWidget);
@@ -249,7 +255,7 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
       size: constraints.biggest,
       painter: BarPainter(
         data: _stacks,
-        animation: _controller.isAnimating ? _controller : null,
+        animation: _currentAnimation,
         ticksResolver: _ticksResolver,
         measureFormatter: widget.measureFormatter,
         showZeroValues: widget.showZeroValues,
@@ -279,20 +285,31 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
     ));
   }
 
-  bool _checkSeriesCompatibility(
+  bool _dataIsDifferent(
+    final List<Series<D, T>> data1,
+    final List<Series<D, T>> data2,
+  )
+  {
+    if (data1.length != data2.length) return true;
+    for (var i = 0; i < data1.length; ++i) {
+      if (!mapEquals(data1[i].data, data2[i].data)) return true;
+    }
+    return false;
+  }
+
+  bool _dataIsCompatible(
     final List<Series<D, T>> set1,
     final List<Series<D, T>> set2,
   )
   {
     final d1 = set1.map((e) => e.data.keys.toList()).expand((e) => e).toSet();
     final d2 = set2.map((e) => e.data.keys.toList()).expand((e) => e).toSet();
-    if (!setEquals(d1, d2)) return false;
-    return true;
+    return setEquals(d1, d2);
   }
 
   void _onAnimationDone()
   {
-    setState(() {});
+    setState(() => _currentAnimation = null);
   }
 
   static BarChartStacks _stacksFromSeries<D, T>(
@@ -344,4 +361,6 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
   late BarTicksResolver _ticksResolver;
   late BarChartStacks _stacks;
   late AnimationController _controller;
+
+  Animation<double>? _currentAnimation;
 }

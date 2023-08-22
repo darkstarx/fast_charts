@@ -141,6 +141,9 @@ class BarChart<D, T> extends StatefulWidget
   /// If zero, the change occurs without animation.
   final Duration animationDuration;
 
+  /// The curve of the change animation.
+  final Curve animationCurve;
+
   const BarChart({
     super.key,
     required this.data,
@@ -171,6 +174,7 @@ class BarChart<D, T> extends StatefulWidget
     this.padding = EdgeInsets.zero,
     this.radius = Radius.zero,
     this.animationDuration = Duration.zero,
+    this.animationCurve = Curves.easeOut,
   });
 
   @override
@@ -234,13 +238,15 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
         inverted: widget.inverted,
         radius: widget.radius,
       );
-      if (widget.data != oldWidget.data
-        && widget.animationDuration > Duration.zero
+      if (widget.animationDuration > Duration.zero
+        && widget.data != oldWidget.data
+        && _dataIsCompatible(oldWidget.data, widget.data)
+        && _dataIsDifferent(widget.data, oldWidget.data)
       ) {
-        final compatible = _checkSeriesCompatibility(oldWidget.data, widget.data);
-        if (compatible) {
-          _controller.forward(from: 0.0);
-        }
+        _controller.forward(from: 0.0);
+        _currentAnimation = _controller.drive(
+          CurveTween(curve: widget.animationCurve),
+        );
       }
     }
     super.didUpdateWidget(oldWidget);
@@ -254,7 +260,7 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
       size: constraints.biggest,
       painter: BarPainter(
         data: _groups,
-        animation: _controller.isAnimating ? _controller : null,
+        animation: _currentAnimation,
         ticksResolver: _ticksResolver,
         measureFormatter: widget.measureFormatter,
         mainAxisTextStyle: widget.mainAxisTextStyle ?? TextStyle(
@@ -284,20 +290,31 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
     ));
   }
 
-  bool _checkSeriesCompatibility(
-    final List<Series<D, T>> set1,
-    final List<Series<D, T>> set2,
+  bool _dataIsDifferent(
+    final List<Series<D, T>> data1,
+    final List<Series<D, T>> data2,
   )
   {
-    final d1 = set1.map((e) => e.data.keys.toList()).expand((e) => e).toSet();
-    final d2 = set2.map((e) => e.data.keys.toList()).expand((e) => e).toSet();
-    if (!setEquals(d1, d2)) return false;
-    return true;
+    if (data1.length != data2.length) return true;
+    for (var i = 0; i < data1.length; ++i) {
+      if (!mapEquals(data1[i].data, data2[i].data)) return true;
+    }
+    return false;
+  }
+
+  bool _dataIsCompatible(
+    final List<Series<D, T>> data1,
+    final List<Series<D, T>> data2,
+  )
+  {
+    final d1 = data1.map((e) => e.data.keys.toList()).expand((e) => e).toSet();
+    final d2 = data2.map((e) => e.data.keys.toList()).expand((e) => e).toSet();
+    return setEquals(d1, d2);
   }
 
   void _onAnimationDone()
   {
-    setState(() {});
+    setState(() => _currentAnimation = null);
   }
 
   static ChartBars _barsFromSeries<D, T>(
@@ -353,4 +370,6 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
   late BarTicksResolver _ticksResolver;
   late ChartBars _groups;
   late AnimationController _controller;
+
+  Animation<double>? _currentAnimation;
 }

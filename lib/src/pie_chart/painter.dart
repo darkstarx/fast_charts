@@ -150,8 +150,15 @@ class PiePainter<D> extends CustomPainter
               label: (offset: lblOffset, paragraph: paragraph)
             ));
           case LabelPosition.outside:
+            final lblCentering = Offset(lblSize.width / 2, lblSize.height / 2);
+            final semiDiagonal = lblCentering.distance;
             final h = radius + labelsOffset;
-            final angle = ui.lerpDouble(startAngle, endAngle, tX)! % doublePi;
+            final dAngle = atan2(semiDiagonal, h);
+            final angle = ui.lerpDouble(
+              startAngle + dAngle,
+              endAngle - dAngle,
+              tX,
+            )! % doublePi;
             final lblAnchor = center + Offset(h * cos(angle), h * sin(angle));
             final isTop = angle > pi;
             final isLeft = angle > halfPi && angle < oneAndHalfPi;

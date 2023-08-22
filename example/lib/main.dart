@@ -27,8 +27,8 @@ class MyApp extends StatelessWidget
         '/example': (context) => const ExamplePage(),
         '/example/bar/single': (context) => const BarSinglePage(),
         '/example/stacked/single': (context) => const StackedBarSinglePage(),
-        '/example/stacked/list': (context) => const StackedBarListPage(),
         '/example/pie/single': (context) => const PieSinglePage(),
+        '/example/stacked/list': (context) => const StackedBarListPage(),
       },
       initialRoute: '/example',
     );
@@ -68,15 +68,15 @@ class ExamplePage extends StatelessWidget
                 ),
                 ElevatedButton(
                   onPressed: () => Navigator.of(context).pushNamed(
-                    '/example/stacked/list',
-                  ),
-                  child: const Text('List of stacked bar charts'),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pushNamed(
                     '/example/pie/single',
                   ),
                   child: const Text('Single pie chart'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pushNamed(
+                    '/example/stacked/list',
+                  ),
+                  child: const Text('List of stacked bar charts'),
                 ),
               ],
             ),
