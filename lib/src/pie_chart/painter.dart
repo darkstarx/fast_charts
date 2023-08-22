@@ -95,8 +95,6 @@ class PiePainter<D> extends CustomPainter
   _LayoutData<D> _buildLayout(final Size size)
   {
     const doublePi = pi * 2;
-    const halfPi = pi / 2;
-    const oneAndHalfPi = pi + halfPi;
     final outerRect = Offset.zero & size;
     final innerRect = padding.deflateRect(outerRect);
     final center = innerRect.center;
@@ -173,23 +171,35 @@ class PiePainter<D> extends CustomPainter
           case LabelPosition.outside:
             final lblCentering = Offset(lblSize.width / 2, lblSize.height / 2);
             final semiDiagonal = lblCentering.distance;
-            final h = radius + labelsOffset;
+            var h = radius + labelsOffset;
             final dAngle = atan2(semiDiagonal, h);
             final angle = ui.lerpDouble(
               startAngle + dAngle,
               endAngle - dAngle,
               tX,
             )! % doublePi;
-            final lblAnchor = center + Offset(h * cos(angle), h * sin(angle));
-            final isTop = angle > pi;
-            final isLeft = angle > halfPi && angle < oneAndHalfPi;
-            final lblOffset = isTop
-              ? isLeft
-                ? lblAnchor - Offset(lblSize.width, lblSize.height)
-                : lblAnchor - Offset(0.0, lblSize.height)
-              : isLeft
-                ? lblAnchor - Offset(lblSize.width, 0.0)
-                : lblAnchor;
+            var lblAnchor = Offset(h * cos(angle), h * sin(angle));
+            final lblRect = Rect.fromCenter(
+              center: lblAnchor,
+              width: lblSize.width,
+              height: lblSize.height,
+            );
+            final lblDistances = [
+              lblRect.topLeft.distance,
+              lblRect.centerLeft.distance,
+              lblRect.bottomLeft.distance,
+              lblRect.topCenter.distance,
+              lblRect.bottomCenter.distance,
+              lblRect.topRight.distance,
+              lblRect.centerRight.distance,
+              lblRect.bottomRight.distance,
+            ];
+            final adjustment = h - lblDistances.reduce(min);
+            if (adjustment > 0.0) {
+              h += adjustment;
+              lblAnchor = Offset(h * cos(angle), h * sin(angle));
+            }
+            final lblOffset = center + lblAnchor - lblCentering;
             labels.add((
               sector: sector,
               label: (offset: lblOffset, paragraph: paragraph)
