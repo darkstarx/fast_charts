@@ -11,17 +11,19 @@ import 'pie_data.dart';
 class PiePainter<D> extends CustomPainter
 {
   final Pie<D> data;
+  final ValueListenable<double>? animation;
   final double angle;
   final double labelsOffset;
   final EdgeInsets padding;
-  final ValueListenable<double>? animation;
+  final Clip clipBehavior;
 
   PiePainter({
     required this.data,
+    this.animation,
     this.angle = 0.0,
     this.labelsOffset = 0.0,
     this.padding = EdgeInsets.zero,
-    this.animation,
+    this.clipBehavior = Clip.hardEdge,
   })
   : super(repaint: animation);
 
@@ -34,7 +36,17 @@ class PiePainter<D> extends CustomPainter
     }
     final layoutData = _layoutData ??= _buildLayout(size);
 
-    canvas.clipRect(layoutData.clipRect, doAntiAlias: false);
+    switch (clipBehavior) {
+      case Clip.none:
+        break;
+      case Clip.hardEdge:
+        canvas.clipRect(layoutData.clipRect, doAntiAlias: false);
+      case Clip.antiAlias:
+        canvas.clipRect(layoutData.clipRect, doAntiAlias: true);
+      case Clip.antiAliasWithSaveLayer:
+        canvas.clipRect(layoutData.clipRect, doAntiAlias: true);
+        canvas.saveLayer(layoutData.clipRect, Paint());
+    }
     final sectors = _sectors = _getSectors(layoutData);
     for (final s in sectors.values) {
       canvas.drawArc(s.rect, s.startAngle, s.sweepAngle, true, s.paint);
@@ -45,24 +57,33 @@ class PiePainter<D> extends CustomPainter
         canvas.drawParagraph(paragraph, offset);
       }
     }
+    switch (clipBehavior) {
+      case Clip.none:
+      case Clip.hardEdge:
+      case Clip.antiAlias:
+        break;
+      case Clip.antiAliasWithSaveLayer:
+        canvas.restore();
+    }
   }
 
   @override
   bool shouldRepaint(final PiePainter<D> oldDelegate)
   {
-    final needRepaint = data != oldDelegate.data
+    final needRebuild = data != oldDelegate.data
       || angle != oldDelegate.angle
       || labelsOffset != oldDelegate.labelsOffset
       || padding != oldDelegate.padding
     ;
-    if (needRepaint) {
+    if (needRebuild) {
       _oldSectors = oldDelegate._sectors;
       _layoutData = null;
     } else {
       _layoutData = oldDelegate._layoutData;
       _lastSize = oldDelegate._lastSize;
     }
-    return needRepaint;
+    return needRebuild
+      || clipBehavior != oldDelegate.clipBehavior;
   }
 
   @override

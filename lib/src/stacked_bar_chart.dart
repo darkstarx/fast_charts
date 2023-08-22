@@ -128,6 +128,11 @@ class StackedBarChart<D, T> extends StatefulWidget
   /// It's zero by default.
   final EdgeInsets padding;
 
+  /// {@macro flutter.material.Material.clipBehavior}
+  ///
+  /// Defaults to [Clip.hardEdge].
+  final Clip clipBehavior;
+
   /// The radius of each bar.
   ///
   /// If zero, the corners of the bars are rectangular and the performance is
@@ -169,6 +174,7 @@ class StackedBarChart<D, T> extends StatefulWidget
     this.barPadding = 0.0,
 
     this.padding = EdgeInsets.zero,
+    this.clipBehavior = Clip.hardEdge,
     this.radius = Radius.zero,
     this.animationDuration = Duration.zero,
     this.animationCurve = Curves.easeOut,
@@ -235,7 +241,7 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
       _stacks = newStacks;
       if (widget.animationDuration > Duration.zero
         && widget.data != oldWidget.data
-        && _dataIsCompatible(oldWidget.data, widget.data)
+        && _dataIsCompatible(widget.data, oldWidget.data)
         && _dataIsDifferent(widget.data, oldWidget.data)
       ) {
         _controller.forward(from: 0.0);
@@ -281,6 +287,7 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
         barPadding: widget.barPadding,
         barSpacing: widget.barSpacing,
         padding: widget.padding,
+        clipBehavior: widget.clipBehavior,
       ),
     ));
   }

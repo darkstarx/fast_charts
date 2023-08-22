@@ -130,6 +130,11 @@ class BarChart<D, T> extends StatefulWidget
   /// It's zero by default.
   final EdgeInsets padding;
 
+  /// {@macro flutter.material.Material.clipBehavior}
+  ///
+  /// Defaults to [Clip.hardEdge].
+  final Clip clipBehavior;
+
   /// The radius of each bar.
   ///
   /// If zero, the corners of the bars are rectangular and the performance is
@@ -172,6 +177,7 @@ class BarChart<D, T> extends StatefulWidget
     this.barPadding = 0.0,
 
     this.padding = EdgeInsets.zero,
+    this.clipBehavior = Clip.hardEdge,
     this.radius = Radius.zero,
     this.animationDuration = Duration.zero,
     this.animationCurve = Curves.easeOut,
@@ -240,7 +246,7 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
       );
       if (widget.animationDuration > Duration.zero
         && widget.data != oldWidget.data
-        && _dataIsCompatible(oldWidget.data, widget.data)
+        && _dataIsCompatible(widget.data, oldWidget.data)
         && _dataIsDifferent(widget.data, oldWidget.data)
       ) {
         _controller.forward(from: 0.0);
@@ -286,6 +292,7 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
         barSpacing: widget.barSpacing,
         groupSpacing: widget.groupSpacing,
         padding: widget.padding,
+        clipBehavior: widget.clipBehavior,
       ),
     ));
   }

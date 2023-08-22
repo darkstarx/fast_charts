@@ -19,9 +19,6 @@ class PieChart<D, T> extends StatefulWidget
   /// The offset of outside labels from the edge of the pie.
   final double labelsOffset;
 
-  /// Pie offsets from the edges.
-  final EdgeInsets padding;
-
   /// Whether to show zero sectors.
   ///
   /// When the measure value is zero, the diagram doesn't show corresponding
@@ -33,6 +30,14 @@ class PieChart<D, T> extends StatefulWidget
   ///
   /// It's `false` by default.
   final bool showZeroValues;
+
+  /// Pie offsets from the edges.
+  final EdgeInsets padding;
+
+  /// {@macro flutter.material.Material.clipBehavior}
+  ///
+  /// Defaults to [Clip.hardEdge].
+  final Clip clipBehavior;
 
   /// The duration of the change animation.
   ///
@@ -47,8 +52,9 @@ class PieChart<D, T> extends StatefulWidget
     required this.data,
     this.angle = 0.0,
     this.labelsOffset = 4.0,
-    this.padding = const EdgeInsets.all(24),
     this.showZeroValues = false,
+    this.padding = const EdgeInsets.all(24),
+    this.clipBehavior = Clip.hardEdge,
     this.animationDuration = Duration.zero,
     this.animationCurve = Curves.easeOut,
   });
@@ -120,6 +126,7 @@ class _PieChartState<D, T> extends State<PieChart<D, T>>
         angle: widget.angle,
         labelsOffset: widget.labelsOffset,
         padding: widget.padding,
+        clipBehavior: widget.clipBehavior,
         animation: _currentAnimation,
       ),
     ));

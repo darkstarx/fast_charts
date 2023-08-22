@@ -33,6 +33,7 @@ class BarPainter extends CustomPainter
   final double barPadding;
   final double barSpacing;
   final EdgeInsets padding;
+  final Clip clipBehavior;
 
   BarPainter({
     required this.data,
@@ -55,6 +56,7 @@ class BarPainter extends CustomPainter
     this.barPadding = 0.0,
     this.barSpacing = 0.0,
     this.padding = EdgeInsets.zero,
+    this.clipBehavior = Clip.hardEdge,
   })
   : super(repaint: animation);
 
@@ -75,7 +77,17 @@ class BarPainter extends CustomPainter
       ..strokeWidth = guideLinesThickness
     ;
 
-    canvas.clipRect(layoutData.clipRect, doAntiAlias: false);
+    switch (clipBehavior) {
+      case Clip.none:
+        break;
+      case Clip.hardEdge:
+        canvas.clipRect(layoutData.clipRect, doAntiAlias: false);
+      case Clip.antiAlias:
+        canvas.clipRect(layoutData.clipRect, doAntiAlias: true);
+      case Clip.antiAliasWithSaveLayer:
+        canvas.clipRect(layoutData.clipRect, doAntiAlias: true);
+        canvas.saveLayer(layoutData.clipRect, Paint());
+    }
     for (final line in layoutData.guideLines) {
       final (p1, p2) = line;
       canvas.drawLine(p1, p2, guideLinesPaint);
@@ -116,12 +128,20 @@ class BarPainter extends CustomPainter
         canvas.drawParagraph(paragraph, offset);
       }
     }
+    switch (clipBehavior) {
+      case Clip.none:
+      case Clip.hardEdge:
+      case Clip.antiAlias:
+        break;
+      case Clip.antiAliasWithSaveLayer:
+        canvas.restore();
+    }
   }
 
   @override
   bool shouldRepaint(final BarPainter oldDelegate)
   {
-    final needRepaint = data != oldDelegate.data
+    final needRebuild = data != oldDelegate.data
       || ticksResolver != oldDelegate.ticksResolver
       || measureFormatter != oldDelegate.measureFormatter
       || showZeroValues != oldDelegate.showZeroValues
@@ -141,14 +161,15 @@ class BarPainter extends CustomPainter
       || barSpacing != oldDelegate.barSpacing
       || padding != oldDelegate.padding
     ;
-    if (needRepaint) {
+    if (needRebuild) {
       _oldStacks = oldDelegate._stacks;
       _layoutData = null;
     } else {
       _layoutData = oldDelegate._layoutData;
       _lastSize = oldDelegate._lastSize;
     }
-    return needRepaint;
+    return needRebuild
+      || clipBehavior != oldDelegate.clipBehavior;
   }
 
   @override
