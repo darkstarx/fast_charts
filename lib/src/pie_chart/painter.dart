@@ -2,9 +2,11 @@ import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import '../label_position.dart';
+import '../strokes_config.dart';
 import 'pie_data.dart';
 
 
@@ -16,6 +18,7 @@ class PiePainter<D> extends CustomPainter
   final double labelsOffset;
   final EdgeInsets padding;
   final Clip clipBehavior;
+  final StrokesConfig? strokes;
 
   PiePainter({
     required this.data,
@@ -24,6 +27,7 @@ class PiePainter<D> extends CustomPainter
     this.labelsOffset = 0.0,
     this.padding = EdgeInsets.zero,
     this.clipBehavior = Clip.hardEdge,
+    this.strokes,
   })
   : super(repaint: animation);
 
@@ -51,6 +55,11 @@ class PiePainter<D> extends CustomPainter
     for (final s in sectors.values) {
       canvas.drawArc(s.rect, s.startAngle, s.sweepAngle, true, s.paint);
     }
+    final strokePath = layoutData.strokePath;
+    final strokePaint = layoutData.strokePaint;
+    if (strokePath != null && strokePaint != null) {
+      canvas.drawPath(strokePath, strokePaint);
+    }
     if (animation == null) {
       for (final label in layoutData.labels) {
         final (offset, paragraph) = label;
@@ -74,6 +83,7 @@ class PiePainter<D> extends CustomPainter
       || angle != oldDelegate.angle
       || labelsOffset != oldDelegate.labelsOffset
       || padding != oldDelegate.padding
+      || strokes != oldDelegate.strokes
     ;
     if (needRebuild) {
       _oldSectors = oldDelegate._sectors;
@@ -83,7 +93,8 @@ class PiePainter<D> extends CustomPainter
       _lastSize = oldDelegate._lastSize;
     }
     return needRebuild
-      || clipBehavior != oldDelegate.clipBehavior;
+      || clipBehavior != oldDelegate.clipBehavior
+    ;
   }
 
   @override
@@ -101,15 +112,35 @@ class PiePainter<D> extends CustomPainter
     final side = innerRect.shortestSide;
     final radius = side / 2;
     final rect = Rect.fromCenter(center: center, width: side, height: side);
-    final layoutData = _LayoutData<D>.empty(
-      rect: rect,
-      clipRect: outerRect,
-    );
     var startAngle = angle;
     final labels = <({
       Sector<D> sector,
       ({Offset offset, ui.Paragraph paragraph}) label
     })>[];
+
+    Path? strokePath;
+    Paint? strokePaint;
+    final strokes = this.strokes;
+    if (strokes != null && strokes.effective) {
+      strokePaint = Paint()
+        ..color = strokes.color
+        ..strokeWidth = strokes.width
+        ..style = PaintingStyle.stroke
+      ;
+      strokePath = Path();
+      if (strokes.outer) {
+        strokePath.addOval(rect);
+      }
+    }
+    final layoutData = _LayoutData<D>(
+      rect: rect,
+      clipRect: outerRect,
+      sectors: {},
+      labels: [],
+      strokePath: strokePath,
+      strokePaint: strokePaint,
+    );
+
     for (final sector in data.sectors) {
       final paint = Paint()
         ..color = sector.color
@@ -205,6 +236,16 @@ class PiePainter<D> extends CustomPainter
               label: (offset: lblOffset, paragraph: paragraph)
             ));
         }
+      }
+      if (strokes != null && strokes.inner) {
+        final point = center + Offset(
+          cos(startAngle) * radius,
+          sin(startAngle) * radius,
+        );
+        strokePath!
+          ..moveTo(center.dx, center.dy)
+          ..lineTo(point.dx, point.dy)
+        ;
       }
       startAngle += sweepAngle;
     }
@@ -340,23 +381,17 @@ class _LayoutData<D>
   final Rect clipRect;
   final Map<D, _Sector> sectors;
   final List<(Offset, ui.Paragraph)> labels;
+  final Path? strokePath;
+  final Paint? strokePaint;
 
   const _LayoutData({
     required this.rect,
     required this.clipRect,
     required this.sectors,
     required this.labels,
+    this.strokePath,
+    this.strokePaint,
   });
-
-  factory _LayoutData.empty({
-    required final Rect rect,
-    required final Rect clipRect,
-  }) => _LayoutData(
-    rect: rect,
-    clipRect: clipRect,
-    sectors: {},
-    labels: [],
-  );
 }
 
 

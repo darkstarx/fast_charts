@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'pie_chart/painter.dart';
 import 'pie_chart/pie_data.dart';
 import 'series.dart';
+import 'strokes_config.dart';
 import 'utils.dart';
 
 
@@ -39,6 +40,9 @@ class PieChart<D, T> extends StatefulWidget
   /// Defaults to [Clip.hardEdge].
   final Clip clipBehavior;
 
+  /// The strokes config.
+  final StrokesConfig? strokes;
+
   /// The duration of the change animation.
   ///
   /// If zero, the change occurs without animation.
@@ -55,6 +59,7 @@ class PieChart<D, T> extends StatefulWidget
     this.showZeroValues = false,
     this.padding = const EdgeInsets.all(24),
     this.clipBehavior = Clip.hardEdge,
+    this.strokes,
     this.animationDuration = Duration.zero,
     this.animationCurve = Curves.easeOut,
   });
@@ -123,11 +128,12 @@ class _PieChartState<D, T> extends State<PieChart<D, T>>
       size: constraints.biggest,
       painter: PiePainter(
         data: _pie,
+        animation: _currentAnimation,
         angle: widget.angle,
         labelsOffset: widget.labelsOffset,
         padding: widget.padding,
         clipBehavior: widget.clipBehavior,
-        animation: _currentAnimation,
+        strokes: widget.strokes,
       ),
     ));
   }

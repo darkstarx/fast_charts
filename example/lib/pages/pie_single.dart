@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:fast_charts/fast_charts.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 
 class PieSinglePage extends StatefulWidget
@@ -92,6 +93,10 @@ class _PieSinglePageState extends State<PieSinglePage>
           Text('Labels', style: titleStyle),
           labelControls,
           const Divider(height: 0.0),
+          const SizedBox(height: 8.0),
+          Text('Strokes', style: titleStyle),
+          strokesControls,
+          const Divider(height: 0.0),
         ],
       ),
     );
@@ -135,13 +140,17 @@ class _PieSinglePageState extends State<PieSinglePage>
         ]),
         Row(children: [
           const SizedBox(width: 52.0, child: Text('Depth')),
-          Expanded(child: Slider(
+          if (_labelsPosition == LabelPosition.inside) Expanded(child: Slider(
             min: -1.0,
             max: 1.0,
             value: _labelsAlignment.y,
-            onChanged: _labelsVisible && _labelsPosition == LabelPosition.inside
-              ? setDepth
-              : null,
+            onChanged: _labelsVisible ? setDepth : null,
+          )),
+          if (_labelsPosition == LabelPosition.outside) Expanded(child: Slider(
+            min: 0.0,
+            max: 24.0,
+            value: _labelsOffset,
+            onChanged: _labelsVisible ? setlabelsOffset : null,
           )),
         ]),
         Row(children: [
@@ -152,6 +161,100 @@ class _PieSinglePageState extends State<PieSinglePage>
             value: _labelsAlignment.x,
             onChanged: _labelsVisible ? setPitch : null,
           )),
+        ]),
+      ],
+    );
+  }
+
+  Widget get strokesControls
+  {
+    final theme = Theme.of(context);
+    final defaultColor = theme.colorScheme.surface;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(children: [
+          Expanded(
+            child: CheckboxListTile(
+              title: const Text('Inner'),
+              value: _strokes?.inner ?? false,
+              onChanged: (value) => setState(() {
+                final strokes = _strokes ?? StrokesConfig(
+                  color: defaultColor,
+                );
+                _strokes = strokes.copyWith(
+                  inner: value,
+                );
+              }),
+            ),
+          ),
+          Expanded(
+            child: CheckboxListTile(
+              title: const Text('Outer'),
+              value: _strokes?.outer ?? false,
+              onChanged: (value) => setState(() {
+                final strokes = _strokes ?? StrokesConfig(
+                  color: defaultColor,
+                );
+                _strokes = strokes.copyWith(
+                  outer: value,
+                );
+              }),
+            ),
+          ),
+        ]),
+        Row(children: [
+          const SizedBox(width: 52.0, child: Text('Width')),
+          Expanded(child: Slider(
+            min: 0.5,
+            max: 5.0,
+            value: _strokes?.width ?? 1.0,
+            onChanged: _strokes?.effective ?? false
+              ? (value) => setState(() {
+                  final strokes = _strokes ?? StrokesConfig(
+                    color: defaultColor,
+                  );
+                  _strokes = strokes.copyWith(
+                    width: value,
+                  );
+                })
+              : null,
+          )),
+        ]),
+        Row(children: [
+          const SizedBox(width: 52.0, child: Text('Color')),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 8.0,
+              ),
+              child: Material(
+                color: _strokes?.color ?? defaultColor,
+                child: InkWell(
+                  onTap: () async {
+                    final strokes = _strokes ?? StrokesConfig(
+                      color: defaultColor,
+                    );
+                    final color = await pickColor(strokes.color);
+                    if (color == null) return;
+                    setState(() => _strokes = strokes.copyWith(
+                      color: color,
+                    ));
+                  },
+                  child: Container(
+                    height: 32.0,
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: theme.colorScheme.primary,
+                        width: 2.0,
+                      )
+                    ),
+                  )
+                ),
+              ),
+            ),
+          ),
         ]),
       ],
     );
@@ -177,10 +280,11 @@ class _PieSinglePageState extends State<PieSinglePage>
             child: PieChart(
               data: _series,
               angle: _angle,
+              labelsOffset: _labelsOffset,
               padding: _labelsVisible && _labelsPosition == LabelPosition.outside
-                ? const EdgeInsets.all(42)
-                : const EdgeInsets.all(8),
-              showZeroValues: true,
+                ? const EdgeInsets.all(42.0)
+                : const EdgeInsets.all(8.0),
+              strokes: _strokes,
               animationDuration: const Duration(milliseconds: 350),
             ),
           );
@@ -226,6 +330,51 @@ class _PieSinglePageState extends State<PieSinglePage>
     );
   }
 
+  Future<Color?> pickColor(final Color value) async
+  {
+    Color? result;
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Pick a color'),
+        content: SingleChildScrollView(
+          child: ColorPicker(
+            pickerColor: value,
+            onColorChanged: (value) => result = value,
+          ),
+          // Use Material color picker:
+          //
+          // child: MaterialPicker(
+          //   pickerColor: pickerColor,
+          //   onColorChanged: changeColor,
+          //   showLabel: true, // only on portrait mode
+          // ),
+          //
+          // Use Block color picker:
+          //
+          // child: BlockPicker(
+          //   pickerColor: currentColor,
+          //   onColorChanged: changeColor,
+          // ),
+          //
+          // child: MultipleChoiceBlockPicker(
+          //   pickerColors: currentColors,
+          //   onColorsChanged: changeColors,
+          // ),
+        ),
+        actions: [
+          ElevatedButton(
+            child: const Text('Got it'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      ),
+    );
+    return result;
+  }
+
   void setLabelPosition(final LabelPosition? value)
   {
     if (value == null) return;
@@ -246,6 +395,13 @@ class _PieSinglePageState extends State<PieSinglePage>
     });
   }
 
+  void setlabelsOffset(final double value)
+  {
+    setState(() {
+      _labelsOffset = value;
+    });
+  }
+
   void setPitch(final double value)
   {
     setState(() {
@@ -263,5 +419,7 @@ class _PieSinglePageState extends State<PieSinglePage>
   bool _labelsVisible = true;
   LabelPosition _labelsPosition = LabelPosition.outside;
   Alignment _labelsAlignment = Alignment.center;
+  double _labelsOffset = 4.0;
   double _panStartAngle = 0.0;
+  StrokesConfig? _strokes;
 }
