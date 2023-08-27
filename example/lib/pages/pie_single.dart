@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:fast_charts/fast_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:intl/intl.dart';
 
 
 class PieSinglePage extends StatefulWidget
@@ -314,10 +315,11 @@ class _PieSinglePageState extends State<PieSinglePage>
   ChartLabel? getLabel(final int value, final double percent, final Color color)
   {
     if (!_labelsVisible) return null;
+    final number = NumberFormat.compact(locale: 'ru');
     final brightness = _labelsPosition == LabelPosition.outside
       ? Theme.of(context).brightness
       : ThemeData.estimateBrightnessForColor(color);
-    return ChartLabel('$value',
+    return ChartLabel(number.format(value),
       style: TextStyle(
         fontSize: 11,
         fontWeight: FontWeight.w500,

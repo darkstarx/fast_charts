@@ -1,7 +1,7 @@
 name: fast_charts
 description: A package of widgets for representing horizontal and vertical stacked bar charts.
 version: 0.0.1
-homepage:
+repository: https://github.com/darkstarx/fast_charts
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
