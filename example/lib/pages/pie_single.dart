@@ -64,12 +64,12 @@ class _PieSinglePageState extends State<PieSinglePage>
     return Scaffold(
       appBar: AppBar(title: const Text('Single pie chart')),
       body: body,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => setState(() {
-          _series = _series.data == data1 ? series2 : series1;
-        }),
-        child: const Icon(Icons.published_with_changes),
-      ),
+      // floatingActionButton: FloatingActionButton(
+      //   onPressed: () => setState(() {
+      //     _series = _series.data == data1 ? series2 : series1;
+      //   }),
+      //   child: const Icon(Icons.published_with_changes),
+      // ),
     );
   }
 
@@ -265,7 +265,7 @@ class _PieSinglePageState extends State<PieSinglePage>
   {
     return Card(
       child: SizedBox(
-        height: 348,
+        height: 300,
         child: LayoutBuilder(builder: (context, constraints) {
           final size = constraints.biggest;
           final center = Offset(size.width / 2, size.height / 2);
@@ -284,7 +284,7 @@ class _PieSinglePageState extends State<PieSinglePage>
               labelsOffset: _labelsOffset,
               padding: _labelsVisible && _labelsPosition == LabelPosition.outside
                 ? const EdgeInsets.all(42.0)
-                : const EdgeInsets.all(8.0),
+                : const EdgeInsets.all(24.0),
               strokes: _strokes,
               animationDuration: const Duration(milliseconds: 350),
             ),
