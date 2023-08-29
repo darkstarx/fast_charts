@@ -33,6 +33,7 @@ This is a set of widgets to render different customizable charts quickly. You ca
 </table>
 
 - Different customization including colors, shapes and labels.
+
 <img width="250" alt="grouped" src="https://raw.githubusercontent.com/darkstarx/fast_charts/main/media/customization.gif">
 
 
@@ -87,7 +88,7 @@ final incomes = Series(
 );
 ```
 
-Also you may also specify the style of labels. If you don't do that, there won't be any labels on the diagram, but if you provide the series with the `labelAccessor` functor, you can choose label position, style and text. The `labelAccessor` provide you with domain, value and percent of total sum of values among the series (can be useful in pie charts).
+You may also specify the style of labels. If you don't do that, there won't be any labels on the diagram, but if you provide the series with the `labelAccessor` functor, you can choose label position, style and text. The `labelAccessor` provide you with domain, value and percent of total sum of values among the series (can be useful in pie charts).
 ```dart
 final data = {
   DateTime(2023, 1): (income: 47300, expense: 15000, color: Colors.redAccent),
