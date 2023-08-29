@@ -64,12 +64,12 @@ class _PieSinglePageState extends State<PieSinglePage>
     return Scaffold(
       appBar: AppBar(title: const Text('Single pie chart')),
       body: body,
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: () => setState(() {
-      //     _series = _series.data == data1 ? series2 : series1;
-      //   }),
-      //   child: const Icon(Icons.published_with_changes),
-      // ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => setState(() {
+          _series = _series.data == data1 ? series2 : series1;
+        }),
+        child: const Icon(Icons.published_with_changes),
+      ),
     );
   }
 
@@ -344,25 +344,6 @@ class _PieSinglePageState extends State<PieSinglePage>
             pickerColor: value,
             onColorChanged: (value) => result = value,
           ),
-          // Use Material color picker:
-          //
-          // child: MaterialPicker(
-          //   pickerColor: pickerColor,
-          //   onColorChanged: changeColor,
-          //   showLabel: true, // only on portrait mode
-          // ),
-          //
-          // Use Block color picker:
-          //
-          // child: BlockPicker(
-          //   pickerColor: currentColor,
-          //   onColorChanged: changeColor,
-          // ),
-          //
-          // child: MultipleChoiceBlockPicker(
-          //   pickerColors: currentColors,
-          //   onColorsChanged: changeColors,
-          // ),
         ),
         actions: [
           ElevatedButton(

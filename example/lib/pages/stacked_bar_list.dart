@@ -124,9 +124,11 @@ class _StackedBarListPageState extends State<StackedBarListPage>
 
   Widget buildGenerativeListView()
   {
-    return ListView.builder(
-      itemCount: _data!.length,
-      itemBuilder: (context, index) => buildCard(index),
+    return Scrollbar(
+      child: ListView.builder(
+        itemCount: _data!.length,
+        itemBuilder: (context, index) => buildCard(index),
+      ),
     );
   }
 

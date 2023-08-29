@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'pages/bar_single.dart';
+import 'pages/pie_list.dart';
 import 'pages/pie_single.dart';
 import 'pages/stacked_bar_list.dart';
 import 'pages/stacked_bar_single.dart';
@@ -25,10 +26,11 @@ class MyApp extends StatelessWidget
       themeMode: ThemeMode.system,
       routes: {
         '/example': (context) => const ExamplePage(),
-        '/example/bar/single': (context) => const BarSinglePage(),
+        '/example/grouped/single': (context) => const BarSinglePage(),
         '/example/stacked/single': (context) => const StackedBarSinglePage(),
-        '/example/pie/single': (context) => const PieSinglePage(),
         '/example/stacked/list': (context) => const StackedBarListPage(),
+        '/example/pie/single': (context) => const PieSinglePage(),
+        '/example/pie/list': (context) => const PieListPage(),
       },
       initialRoute: '/example',
     );
@@ -56,9 +58,9 @@ class ExamplePage extends StatelessWidget
               children: [
                 ElevatedButton(
                   onPressed: () => Navigator.of(context).pushNamed(
-                    '/example/bar/single',
+                    '/example/grouped/single',
                   ),
-                  child: const Text('Single bar chart'),
+                  child: const Text('Single grouped bar chart'),
                 ),
                 ElevatedButton(
                   onPressed: () => Navigator.of(context).pushNamed(
@@ -72,11 +74,18 @@ class ExamplePage extends StatelessWidget
                   ),
                   child: const Text('Single pie chart'),
                 ),
+                const Divider(),
                 ElevatedButton(
                   onPressed: () => Navigator.of(context).pushNamed(
                     '/example/stacked/list',
                   ),
                   child: const Text('List of stacked bar charts'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pushNamed(
+                    '/example/pie/list',
+                  ),
+                  child: const Text('List of pie charts'),
                 ),
               ],
             ),

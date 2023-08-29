@@ -51,12 +51,12 @@ class PiePainter<D> extends CustomPainter
         canvas.clipRect(layoutData.clipRect, doAntiAlias: true);
         canvas.saveLayer(layoutData.clipRect, Paint());
     }
-    final sectors = _sectors = _getSectors(layoutData);
-    for (final s in sectors.values) {
+    final pie = _pie = _getPie(layoutData);
+    for (final s in pie.sectors.values) {
       canvas.drawArc(s.rect, s.startAngle, s.sweepAngle, true, s.paint);
     }
-    final strokePath = layoutData.strokePath;
-    final strokePaint = layoutData.strokePaint;
+    final strokePath = pie.strokePath;
+    final strokePaint = pie.strokePaint;
     if (strokePath != null && strokePaint != null) {
       canvas.drawPath(strokePath, strokePaint);
     }
@@ -86,7 +86,7 @@ class PiePainter<D> extends CustomPainter
       || strokes != oldDelegate.strokes
     ;
     if (needRebuild) {
-      _oldSectors = oldDelegate._sectors;
+      _oldPie = oldDelegate._pie;
       _layoutData = null;
     } else {
       _layoutData = oldDelegate._layoutData;
@@ -135,10 +135,12 @@ class PiePainter<D> extends CustomPainter
     final layoutData = _LayoutData<D>(
       rect: rect,
       clipRect: outerRect,
-      sectors: {},
+      pie: _Pie(
+        strokePath: strokePath,
+        strokePaint: strokePaint,
+        sectors: {},
+      ),
       labels: [],
-      strokePath: strokePath,
-      strokePaint: strokePaint,
     );
 
     for (final sector in data.sectors) {
@@ -146,8 +148,8 @@ class PiePainter<D> extends CustomPainter
         ..color = sector.color
         ..style = PaintingStyle.fill
       ;
-      final sweepAngle = doublePi * sector.value / 100;
-      layoutData.sectors[sector.domain] = _Sector(
+      final sweepAngle = doublePi * sector.value.abs() / 100;
+      layoutData.pie.sectors[sector.domain] = _Sector(
         rect: rect,
         startAngle: startAngle,
         sweepAngle: sweepAngle,
@@ -283,15 +285,15 @@ class PiePainter<D> extends CustomPainter
     return layoutData;
   }
 
-  Map<D, _Sector> _getSectors(final _LayoutData<D> layoutData)
+  _Pie<D> _getPie(final _LayoutData<D> layoutData)
   {
     final animation = this.animation;
     if (animation == null) {
-      return layoutData.sectors;
+      return layoutData.pie;
     } else {
       final sectors = <D, _Sector>{};
-      final newSectors = Map<D, _Sector>.from(layoutData.sectors);
-      final oldSectors = Map<D, _Sector>.from(_oldSectors!);
+      final newSectors = Map<D, _Sector>.from(layoutData.pie.sectors);
+      final oldSectors = Map<D, _Sector>.from(_oldPie!.sectors);
       for (final entry in newSectors.entries.toList()) {
         final domain = entry.key;
         final newSector = entry.value;
@@ -364,14 +366,46 @@ class PiePainter<D> extends CustomPainter
       }
       assert(newSectors.isEmpty);
       assert(oldSectors.isEmpty);
-      return sectors;
+      Paint? strokePaint;
+      Path? strokePath;
+      final strokes = this.strokes;
+      if (strokes != null && strokes.effective && sectors.isNotEmpty) {
+        strokePaint = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokes.width
+          ..color = strokes.color
+        ;
+        strokePath = Path();
+        if (strokes.inner) {
+          for (final sector in sectors.values) {
+            final center = sector.rect.center;
+            final radius = sector.rect.width / 2;
+            final point = center + Offset(
+              cos(sector.startAngle) * radius,
+              sin(sector.startAngle) * radius,
+            );
+            strokePath
+              ..moveTo(center.dx, center.dy)
+              ..lineTo(point.dx, point.dy)
+            ;
+          }
+        }
+        if (strokes.outer) {
+          strokePath.addOval(sectors.values.first.rect);
+        }
+      }
+      return _Pie(
+        sectors: sectors,
+        strokePath: strokePath,
+        strokePaint: strokePaint,
+      );
     }
   }
 
   _LayoutData<D>? _layoutData;
   Size? _lastSize;
-  Map<D, _Sector>? _sectors;
-  Map<D, _Sector>? _oldSectors;
+  _Pie<D>? _pie;
+  _Pie<D>? _oldPie;
 }
 
 
@@ -379,18 +413,28 @@ class _LayoutData<D>
 {
   final Rect rect;
   final Rect clipRect;
-  final Map<D, _Sector> sectors;
+  final _Pie<D> pie;
   final List<(Offset, ui.Paragraph)> labels;
-  final Path? strokePath;
-  final Paint? strokePaint;
 
   const _LayoutData({
     required this.rect,
     required this.clipRect,
-    required this.sectors,
+    required this.pie,
     required this.labels,
-    this.strokePath,
-    this.strokePaint,
+  });
+}
+
+
+class _Pie<D>
+{
+  final Path? strokePath;
+  final Paint? strokePaint;
+  final Map<D, _Sector> sectors;
+
+  const _Pie({
+    required this.strokePath,
+    required this.strokePaint,
+    required this.sectors,
   });
 }
 

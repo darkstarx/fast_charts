@@ -98,7 +98,7 @@ class _BarSinglePageState extends State<BarSinglePage>
   Widget build(final BuildContext context)
   {
     return Scaffold(
-      appBar: AppBar(title: const Text('Single bar chart')),
+      appBar: AppBar(title: const Text('Single grouped bar chart')),
       body: card,
       floatingActionButton: FloatingActionButton(
         onPressed: () => setState(() {
