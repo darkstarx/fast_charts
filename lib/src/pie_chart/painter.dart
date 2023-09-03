@@ -19,6 +19,7 @@ class PiePainter<D> extends CustomPainter
   final EdgeInsets padding;
   final Clip clipBehavior;
   final StrokesConfig? strokes;
+  final double holeSize;
 
   PiePainter({
     required this.data,
@@ -28,6 +29,7 @@ class PiePainter<D> extends CustomPainter
     this.padding = EdgeInsets.zero,
     this.clipBehavior = Clip.hardEdge,
     this.strokes,
+    this.holeSize = 0.0,
   })
   : super(repaint: animation);
 
@@ -53,7 +55,12 @@ class PiePainter<D> extends CustomPainter
     }
     final pie = _pie = _getPie(layoutData);
     for (final s in pie.sectors.values) {
-      canvas.drawArc(s.rect, s.startAngle, s.sweepAngle, true, s.paint);
+      final path = s.path;
+      if (path == null) {
+        canvas.drawArc(s.rect, s.startAngle, s.sweepAngle, true, s.paint);
+      } else {
+        canvas.drawPath(path, s.paint);
+      }
     }
     final strokePath = pie.strokePath;
     final strokePaint = pie.strokePaint;
@@ -88,6 +95,7 @@ class PiePainter<D> extends CustomPainter
       || labelsOffset != oldDelegate.labelsOffset
       || padding != oldDelegate.padding
       || strokes != oldDelegate.strokes
+      || holeSize != oldDelegate.holeSize
     ;
     if (needRebuild) {
       _layoutData = null;
@@ -110,9 +118,14 @@ class PiePainter<D> extends CustomPainter
     final outerRect = Offset.zero & size;
     final innerRect = padding.deflateRect(outerRect);
     final center = innerRect.center;
-    final side = innerRect.shortestSide;
-    final radius = side / 2;
-    final rect = Rect.fromCenter(center: center, width: side, height: side);
+    final diameter = innerRect.shortestSide;
+    final radius = diameter / 2;
+    final rect = Rect.fromCenter(center: center,
+      width: diameter, height: diameter,
+    );
+    final holeRadius = (radius * holeSize).clamp(0.0, radius - 1.0);
+    final holeDiameter = (diameter * holeSize).clamp(0.0, diameter - 2.0);
+    final thickness = radius - holeRadius;
     var startAngle = angle;
     final labels = <({
       Sector<D> sector,
@@ -131,6 +144,11 @@ class PiePainter<D> extends CustomPainter
       strokePath = Path();
       if (strokes.outer) {
         strokePath.addOval(rect);
+        if (holeDiameter > 0.0) {
+          strokePath.addOval(Rect.fromCenter(center: rect.center,
+            width: holeDiameter, height: holeDiameter,
+          ));
+        }
       }
     }
     final layoutData = _LayoutData<D>(
@@ -150,11 +168,12 @@ class PiePainter<D> extends CustomPainter
         ..style = PaintingStyle.fill
       ;
       final sweepAngle = doublePi * sector.value.abs() / 100;
-      layoutData.pie.sectors[sector.domain] = _Sector(
+      layoutData.pie.sectors[sector.domain] = _Sector.withHole(
         rect: rect,
         startAngle: startAngle,
         sweepAngle: sweepAngle,
-        paint: paint
+        paint: paint,
+        holeSize: holeSize,
       );
       final label = sector.label;
       if (label != null) {
@@ -172,30 +191,47 @@ class PiePainter<D> extends CustomPainter
           case LabelPosition.inside:
             final lblCentering = Offset(lblSize.width / 2, lblSize.height / 2);
             final semiDiagonal = lblCentering.distance;
-            var h = semiDiagonal + (radius - semiDiagonal) * tY;
+            var h = ui.lerpDouble(max(holeRadius, semiDiagonal), radius, tY)!;
             final dAngle = atan2(semiDiagonal, h);
             final angle = ui.lerpDouble(
               startAngle + dAngle,
               endAngle - dAngle,
               tX,
             )!;
-            var lblCenter = Offset(h * cos(angle), h * sin(angle));
+            final cosAngle = cos(angle);
+            final sinAngle = sin(angle);
+            var lblCenter = Offset(h * cosAngle, h * sinAngle);
             final lblRect = Rect.fromCenter(
               center: lblCenter,
               width: lblSize.width,
               height: lblSize.height,
             );
-            final lblDistances = [
-              lblRect.topLeft.distance,
-              lblRect.topRight.distance,
-              lblRect.bottomLeft.distance,
-              lblRect.bottomRight.distance,
+            final lblPoints = [
+              lblRect.topLeft,
+              lblRect.topCenter,
+              lblRect.topRight,
+              lblRect.centerLeft,
+              lblRect.centerRight,
+              lblRect.bottomLeft,
+              lblRect.bottomCenter,
+              lblRect.bottomRight,
             ];
-            final outDistances = lblDistances.where((d) => d > radius).toList();
+            var adjustment = 0.0;
+            final inDistances = lblPoints
+              .map((p) => radius - p.distance)
+              .where((d) => d > thickness);
+            if (inDistances.isNotEmpty) {
+              adjustment += max(0.0, inDistances.reduce(max) - thickness);
+            }
+            final outDistances = lblPoints
+              .map((p) => p.distance)
+              .where((d) => d > radius);
             if (outDistances.isNotEmpty) {
-              final adjustment = max(0.0, lblDistances.reduce(max) - radius);
-              h -= adjustment;
-              lblCenter = Offset(h * cos(angle), h * sin(angle));
+              adjustment -= max(0.0, outDistances.reduce(max) - radius);
+            }
+            if (adjustment != 0.0) {
+              h += adjustment;
+              lblCenter = Offset(h * cosAngle, h * sinAngle);
             }
             final lblOffset = center + lblCenter - lblCentering;
             labels.add((
@@ -241,13 +277,12 @@ class PiePainter<D> extends CustomPainter
         }
       }
       if (strokes != null && strokes.inner) {
-        final point = center + Offset(
-          cos(startAngle) * radius,
-          sin(startAngle) * radius,
-        );
+        final point = Offset(cos(startAngle), sin(startAngle));
+        final p1 = center + point * holeRadius;
+        final p2 = center + point * radius;
         strokePath!
-          ..moveTo(center.dx, center.dy)
-          ..lineTo(point.dx, point.dy)
+          ..moveTo(p1.dx, p1.dy)
+          ..lineTo(p2.dx, p2.dy)
         ;
       }
       startAngle += sweepAngle;
@@ -300,50 +335,66 @@ class PiePainter<D> extends CustomPainter
         final newSector = entry.value;
         final oldSector = oldSectors.remove(domain);
         if (oldSector == null) continue;
-        sectors[domain] = _Sector(
-          rect: Rect.lerp(oldSector.rect, newSector.rect,
+        final rect = Rect.lerp(oldSector.rect, newSector.rect,
+          animation.value,
+        )!;
+        final startAngle = ui.lerpDouble(oldSector.startAngle, newSector.startAngle,
+          animation.value,
+        )!;
+        final sweepAngle = ui.lerpDouble(oldSector.sweepAngle, newSector.sweepAngle,
+          animation.value,
+        )!;
+        final paint = Paint()
+          ..color = Color.lerp(oldSector.paint.color, newSector.paint.color,
             animation.value,
-          )!,
-          startAngle: ui.lerpDouble(oldSector.startAngle, newSector.startAngle,
-            animation.value,
-          )!,
-          sweepAngle: ui.lerpDouble(oldSector.sweepAngle, newSector.sweepAngle,
-            animation.value,
-          )!,
-          paint: Paint()
-            ..color = Color.lerp(oldSector.paint.color, newSector.paint.color,
-              animation.value,
-            )!
-            ..style = PaintingStyle.fill,
+          )!
+          ..style = PaintingStyle.fill
+        ;
+        sectors[domain] = _Sector.withHole(
+          rect: rect,
+          startAngle: startAngle,
+          sweepAngle: sweepAngle,
+          paint: paint,
+          holeSize: holeSize,
         );
         newSectors.remove(domain);
       }
       for (final entry in newSectors.entries.toList()) {
         final domain = entry.key;
         final newSector = entry.value;
-        final oldSector = oldSectors.isEmpty
-          ? _Sector(
-              rect: newSector.rect,
-              startAngle: angle,
-              sweepAngle: 0.0,
-              paint: newSector.paint,
-            )
-          : oldSectors.remove(oldSectors.keys.first)!;
-        sectors[domain] = _Sector(
-          rect: Rect.lerp(oldSector.rect, newSector.rect,
+        final _Sector oldSector;
+        if (oldSectors.isEmpty) {
+          oldSector = _Sector.withHole(
+            rect: newSector.rect,
+            startAngle: angle,
+            sweepAngle: 0.0,
+            paint: newSector.paint,
+            holeSize: holeSize,
+          );
+        } else {
+          oldSector = oldSectors.remove(oldSectors.keys.first)!;
+        }
+        final rect = Rect.lerp(oldSector.rect, newSector.rect,
+          animation.value,
+        )!;
+        final startAngle = ui.lerpDouble(oldSector.startAngle, newSector.startAngle,
+          animation.value,
+        )!;
+        final sweepAngle = ui.lerpDouble(oldSector.sweepAngle, newSector.sweepAngle,
+          animation.value,
+        )!;
+        final paint = Paint()
+          ..color = Color.lerp(oldSector.paint.color, newSector.paint.color,
             animation.value,
-          )!,
-          startAngle: ui.lerpDouble(oldSector.startAngle, newSector.startAngle,
-            animation.value,
-          )!,
-          sweepAngle: ui.lerpDouble(oldSector.sweepAngle, newSector.sweepAngle,
-            animation.value,
-          )!,
-          paint: Paint()
-            ..color = Color.lerp(oldSector.paint.color, newSector.paint.color,
-              animation.value,
-            )!
-            ..style = PaintingStyle.fill,
+          )!
+          ..style = PaintingStyle.fill
+        ;
+        sectors[domain] = _Sector.withHole(
+          rect: rect,
+          startAngle: startAngle,
+          sweepAngle: sweepAngle,
+          paint: paint,
+          holeSize: holeSize,
         );
         newSectors.remove(domain);
       }
@@ -351,7 +402,7 @@ class PiePainter<D> extends CustomPainter
         final domain = entry.key;
         final oldSector = entry.value;
         if (sectors.containsKey(domain)) continue;
-        sectors[domain] = _Sector(
+        sectors[domain] = _Sector.withHole(
           rect: Rect.lerp(oldSector.rect, layoutData.rect,
             animation.value,
           )!,
@@ -362,6 +413,7 @@ class PiePainter<D> extends CustomPainter
             animation.value,
           )!,
           paint: oldSector.paint,
+          holeSize: holeSize,
         );
         oldSectors.remove(domain);
       }
@@ -371,6 +423,7 @@ class PiePainter<D> extends CustomPainter
       Path? strokePath;
       final strokes = this.strokes;
       if (strokes != null && strokes.effective && sectors.isNotEmpty) {
+        final hl = holeSize.clamp(0.0, 1.0);
         strokePaint = Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = strokes.width
@@ -381,18 +434,24 @@ class PiePainter<D> extends CustomPainter
           for (final sector in sectors.values) {
             final center = sector.rect.center;
             final radius = sector.rect.width / 2;
-            final point = center + Offset(
-              cos(sector.startAngle) * radius,
-              sin(sector.startAngle) * radius,
-            );
+            final point = Offset(cos(sector.startAngle), sin(sector.startAngle));
+            final p1 = center + point * radius * hl;
+            final p2 = center + point * radius;
             strokePath
-              ..moveTo(center.dx, center.dy)
-              ..lineTo(point.dx, point.dy)
+              ..moveTo(p1.dx, p1.dy)
+              ..lineTo(p2.dx, p2.dy)
             ;
           }
         }
         if (strokes.outer) {
-          strokePath.addOval(sectors.values.first.rect);
+          strokePath.addOval(layoutData.rect);
+          if (hl > 0.0) {
+            strokePath.addOval(Rect.fromCenter(
+              center: layoutData.rect.center,
+              width: layoutData.rect.width * hl,
+              height: layoutData.rect.height * hl,
+            ));
+          }
         }
       }
       return _Pie(
@@ -428,9 +487,16 @@ class PiePainter<D> extends CustomPainter
 
 class _LayoutData<D>
 {
+  /// The pie square.
   final Rect rect;
+
+  /// The area of the widget to be clipped.
   final Rect clipRect;
+
+  /// The geometry of the pie.
   final _Pie<D> pie;
+
+  /// Paragraphs with their positions.
   final List<(Offset, ui.Paragraph)> labels;
 
   const _LayoutData({
@@ -462,11 +528,46 @@ class _Sector
   final double startAngle;
   final double sweepAngle;
   final Paint paint;
+  final Path? path;
 
   const _Sector({
     required this.rect,
     required this.startAngle,
     required this.sweepAngle,
     required this.paint,
+    this.path,
   });
+
+  factory _Sector.withHole({
+    required final Rect rect,
+    required final double startAngle,
+    required final double sweepAngle,
+    required final Paint paint,
+    required double holeSize,
+  })
+  {
+    final hs = holeSize.clamp(0.0, 1.0);
+    Path? path;
+    if (hs > 0.0) {
+      final d = rect.shortestSide;
+      final r = d / 2;
+      final hr = min(r * hs, r - 1.0);
+      final hd = hr * 2;
+      final center = rect.center;
+      final hRect = Rect.fromCenter(center: center, width: hd, height: hd);
+      final endAngle = startAngle + sweepAngle;
+      path = Path()
+        ..arcTo(rect, startAngle, sweepAngle, false)
+        ..lineTo(center.dx + cos(endAngle) * hr, center.dy + sin(endAngle) * hr)
+        ..arcTo(hRect, endAngle, -sweepAngle, false)
+      ;
+    }
+    return _Sector(
+      rect: rect,
+      startAngle: startAngle,
+      sweepAngle: sweepAngle,
+      paint: paint,
+      path: path,
+    );
+  }
 }

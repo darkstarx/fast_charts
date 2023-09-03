@@ -43,6 +43,11 @@ class PieChart<D, T> extends StatefulWidget
   /// The strokes config.
   final StrokesConfig? strokes;
 
+  /// The size of the hole inside the pie in percents of radius.
+  ///
+  /// It must be set in range from 0.0 to 1.0, otherwise it will be clamped.
+  final double holeSize;
+
   /// The duration of the change animation.
   ///
   /// If zero, the change occurs without animation.
@@ -60,6 +65,7 @@ class PieChart<D, T> extends StatefulWidget
     this.padding = const EdgeInsets.all(24),
     this.clipBehavior = Clip.hardEdge,
     this.strokes,
+    this.holeSize = 0.0,
     this.animationDuration = Duration.zero,
     this.animationCurve = Curves.easeOut,
   });
@@ -134,6 +140,7 @@ class _PieChartState<D, T> extends State<PieChart<D, T>>
         padding: widget.padding,
         clipBehavior: widget.clipBehavior,
         strokes: widget.strokes,
+        holeSize: widget.holeSize,
       ),
     ));
   }

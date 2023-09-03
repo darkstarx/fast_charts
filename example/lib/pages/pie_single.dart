@@ -56,6 +56,7 @@ class _PieSinglePageState extends State<PieSinglePage>
     super.initState();
     _series = series1;
     _angle = 0.0;
+    _holeSize = 0.0;
   }
 
   @override
@@ -97,6 +98,10 @@ class _PieSinglePageState extends State<PieSinglePage>
           const SizedBox(height: 8.0),
           Text('Strokes', style: titleStyle),
           strokesControls,
+          const Divider(height: 0.0),
+          const SizedBox(height: 8.0),
+          Text('Other', style: titleStyle),
+          otherControls,
           const Divider(height: 0.0),
         ],
       ),
@@ -261,6 +266,26 @@ class _PieSinglePageState extends State<PieSinglePage>
     );
   }
 
+  Widget get otherControls
+  {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(children: [
+          const SizedBox(width: 52.0, child: Text('Hole')),
+          Expanded(child: Slider(
+            min: 0.0,
+            max: 1.0,
+            value: _holeSize,
+            onChanged: (value) => setState(() {
+              _holeSize = value;
+            }),
+          )),
+        ]),
+      ],
+    );
+  }
+
   Widget get card
   {
     return Card(
@@ -286,6 +311,7 @@ class _PieSinglePageState extends State<PieSinglePage>
                 ? const EdgeInsets.all(42.0)
                 : const EdgeInsets.all(24.0),
               strokes: _strokes,
+              holeSize: _holeSize,
               animationDuration: const Duration(milliseconds: 350),
             ),
           );
@@ -398,6 +424,7 @@ class _PieSinglePageState extends State<PieSinglePage>
 
   late Series<String, int> _series;
   late double _angle;
+  late double _holeSize;
 
   bool _labelsVisible = true;
   LabelPosition _labelsPosition = LabelPosition.outside;
