@@ -119,13 +119,17 @@ class _StackedBarListPageState extends State<StackedBarListPage>
       children.add(buildCard(i));
       await Future(() {});
     }
-    return SingleChildScrollView(child: Column(children: children));
+    return SingleChildScrollView(
+      primary: true,
+      child: Column(children: children),
+    );
   }
 
   Widget buildGenerativeListView()
   {
     return Scrollbar(
       child: ListView.builder(
+        primary: true,
         itemCount: _data!.length,
         itemBuilder: (context, index) => buildCard(index),
       ),

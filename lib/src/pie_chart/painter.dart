@@ -86,8 +86,8 @@ class PiePainter<D> extends CustomPainter
       || strokes != oldDelegate.strokes
     ;
     if (needRebuild) {
-      _oldPie = oldDelegate._pie;
       _layoutData = null;
+      _oldPie = oldDelegate._pie;
     } else {
       _layoutData = oldDelegate._layoutData;
       _lastSize = oldDelegate._lastSize;

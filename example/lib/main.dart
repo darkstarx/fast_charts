@@ -13,19 +13,32 @@ void main()
 }
 
 
-class MyApp extends StatelessWidget
+class MyApp extends StatefulWidget
 {
   const MyApp({ super.key });
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+
+class _MyAppState extends State<MyApp>{
+  @override
   Widget build(final BuildContext context)
   {
     return MaterialApp(
-      theme: ThemeData.light(),
-      darkTheme: ThemeData.dark(),
-      themeMode: ThemeMode.system,
+      theme: ThemeData.light(useMaterial3: true).copyWith(
+        materialTapTargetSize: MaterialTapTargetSize.padded,
+      ),
+      darkTheme: ThemeData.dark(useMaterial3: true).copyWith(
+        materialTapTargetSize: MaterialTapTargetSize.padded,
+      ),
+      themeMode: _themeMode,
       routes: {
-        '/example': (context) => const ExamplePage(),
+        '/example': (context) => ExamplePage(
+          themeMode: _themeMode,
+          onThemeModeChanged: (value) => setState(() => _themeMode = value),
+        ),
         '/example/grouped/single': (context) => const BarSinglePage(),
         '/example/stacked/single': (context) => const StackedBarSinglePage(),
         '/example/stacked/list': (context) => const StackedBarListPage(),
@@ -35,12 +48,32 @@ class MyApp extends StatelessWidget
       initialRoute: '/example',
     );
   }
+
+  var _themeMode = ThemeMode.system;
 }
 
 
 class ExamplePage extends StatelessWidget
 {
-  const ExamplePage({ super.key });
+  final ThemeMode? themeMode;
+  final ValueChanged<ThemeMode>? onThemeModeChanged;
+
+  bool isDark(final BuildContext context)
+  {
+    switch (themeMode) {
+      case null:
+      case ThemeMode.system:
+        return MediaQuery.of(context).platformBrightness == Brightness.dark;
+      case ThemeMode.dark: return true;
+      case ThemeMode.light: return false;
+    }
+  }
+
+  const ExamplePage({
+    super.key,
+    this.themeMode,
+    this.onThemeModeChanged,
+  });
 
   @override
   Widget build(final BuildContext context)
@@ -49,11 +82,11 @@ class ExamplePage extends StatelessWidget
       appBar: AppBar(title: const Text('Example')),
       body: Padding(
         padding: const EdgeInsets.all(8.0),
-        child: Center(
-          child: SizedBox(
+        child: Column(children: [
+          const Spacer(),
+          Center(child: SizedBox(
             width: 320,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 ElevatedButton(
@@ -89,8 +122,24 @@ class ExamplePage extends StatelessWidget
                 ),
               ],
             ),
+          )),
+          const Spacer(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text('Dark mode', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(width: 8.0),
+              Switch(
+                value: isDark(context),
+                onChanged: onThemeModeChanged == null
+                  ? null
+                  : (value) => onThemeModeChanged!(
+                      value ? ThemeMode.dark : ThemeMode.light
+                    ),
+              ),
+            ],
           ),
-        ),
+        ]),
       ),
     );
   }

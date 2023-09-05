@@ -69,6 +69,7 @@ class PieListPage extends StatelessWidget
       appBar: AppBar(title: const Text('List of pie charts')),
       body: Scrollbar(
         child: GridView.builder(
+          primary: true,
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
           ),
