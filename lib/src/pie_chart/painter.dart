@@ -79,6 +79,10 @@ class PiePainter<D> extends CustomPainter
   @override
   bool shouldRepaint(final PiePainter<D> oldDelegate)
   {
+    _layoutData = oldDelegate._layoutData;
+    _lastSize = oldDelegate._lastSize;
+    _pie = oldDelegate._pie;
+    _oldPie = oldDelegate._oldPie;
     final needRebuild = data != oldDelegate.data
       || angle != oldDelegate.angle
       || labelsOffset != oldDelegate.labelsOffset
@@ -87,10 +91,7 @@ class PiePainter<D> extends CustomPainter
     ;
     if (needRebuild) {
       _layoutData = null;
-      _oldPie = oldDelegate._pie;
-    } else {
-      _layoutData = oldDelegate._layoutData;
-      _lastSize = oldDelegate._lastSize;
+      _oldPie = _pie;
     }
     return needRebuild
       || clipBehavior != oldDelegate.clipBehavior
@@ -402,9 +403,25 @@ class PiePainter<D> extends CustomPainter
     }
   }
 
+  /// The latest content to be drawn next [paint] call.
   _LayoutData<D>? _layoutData;
+
+  /// The size of the last drawn content.
+  ///
+  /// It's used to define if the [_layoutData] must be rebuilt.
   Size? _lastSize;
+
+  /// The last drawn pie.
+  ///
+  /// It goes to the [_oldPie] every time the data changes. Than it's used to
+  /// compare previous sectors with new sectors to animate the change.
   _Pie<D>? _pie;
+
+  /// The pie built of the previous data's sectors.
+  ///
+  /// Every time the data changes, the last drawn [_pie] goes into this value to
+  /// be compared with the new data's sectors. Than the new and old versions of
+  /// sectors merge into new [_pie] using the current animation.
   _Pie<D>? _oldPie;
 }
 
