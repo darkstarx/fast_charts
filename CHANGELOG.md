@@ -1,3 +1,7 @@
+## 0.1.0
+
+* Support doughnat diagrams.
+
 ## 0.0.3
 
 * [fix] Desktop scrollbar exception.

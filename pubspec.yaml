@@ -1,6 +1,6 @@
 name: fast_charts
 description: A package of high-performance customizable charts, including horizontal and vertical stacked bar charts, group charts and pie charts with change animation.
-version: 0.0.3
+version: 0.1.0
 repository: https://github.com/darkstarx/fast_charts
 
 environment:
