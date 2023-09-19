@@ -16,12 +16,6 @@ class ChartBars
     this.valueAxis = Axis.vertical,
     this.inverted = false,
   });
-
-  ChartBars operator *(final double ratio) => ChartBars(
-    groups: groups.map((e) => e * ratio).toList(),
-    valueAxis: valueAxis,
-    inverted: inverted,
-  );
 }
 
 
@@ -79,11 +73,6 @@ class BarsGroup
     required this.domain,
     required this.bars,
   });
-
-  BarsGroup operator *(final double ratio) => BarsGroup(
-    domain: domain,
-    bars: bars.map((e) => e * ratio).toList(),
-  );
 }
 
 
@@ -111,13 +100,6 @@ class Bar
     color: color ?? this.color,
     radius: radius ?? this.radius,
     label: label ?? this.label,
-  );
-
-  Bar operator *(final double ratio) => Bar(
-    value: value * ratio,
-    color: color,
-    radius: radius,
-    label: label,
   );
 
   @override

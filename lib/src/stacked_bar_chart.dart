@@ -232,13 +232,12 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
       || widget.inverted != oldWidget.inverted
       || widget.radius != oldWidget.radius
     ) {
-      final newStacks = _stacksFromSeries(widget.data,
+      _stacks = _stacksFromSeries(widget.data,
         domainFormatter: widget.domainFormatter,
         valueAxis: widget.valueAxis,
         inverted: widget.inverted,
         radius: widget.radius,
       );
-      _stacks = newStacks;
       if (widget.animationDuration > Duration.zero
         && widget.data != oldWidget.data
         && _dataIsCompatible(widget.data, oldWidget.data)

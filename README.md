@@ -7,11 +7,13 @@ This is a set of widgets to render different customizable charts quickly. You ca
   <tr>
     <th>Grouped bar charts</th>
     <th>Stacked bar charts</th>
+    <th>Radial stacked bar charts</th>
     <th>Pie charts</th>
   </tr>
   <tr>
     <td><img width="250" alt="grouped" src="https://raw.githubusercontent.com/darkstarx/fast_charts/main/media/grouped.png"></td>
     <td><img width="250" alt="stacked" src="https://raw.githubusercontent.com/darkstarx/fast_charts/main/media/stacked.png"></td>
+    <td><img width="250" alt="radial" src="https://raw.githubusercontent.com/darkstarx/fast_charts/main/media/radial.png"></td>
     <td><img width="250" alt="pie" src="https://raw.githubusercontent.com/darkstarx/fast_charts/main/media/pie.png"></td>
   </tr>
 </table>
@@ -23,11 +25,13 @@ This is a set of widgets to render different customizable charts quickly. You ca
   <tr>
     <th>Grouped bar charts</th>
     <th>Stacked bar charts</th>
+    <th>Radial stacked bar charts</th>
     <th>Pie charts</th>
   </tr>
   <tr>
     <td><img width="250" alt="grouped" src="https://raw.githubusercontent.com/darkstarx/fast_charts/main/media/anim/grouped.gif"></td>
     <td><img width="250" alt="stacked" src="https://raw.githubusercontent.com/darkstarx/fast_charts/main/media/anim/stacked.gif"></td>
+    <td><img width="250" alt="radial" src="https://raw.githubusercontent.com/darkstarx/fast_charts/main/media/anim/radial.gif"></td>
     <td><img width="250" alt="pie" src="https://raw.githubusercontent.com/darkstarx/fast_charts/main/media/anim/pie.gif"></td>
   </tr>
 </table>

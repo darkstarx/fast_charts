@@ -1,3 +1,7 @@
+## 0.2.0
+
+* Support radial stacked bar chart.
+
 ## 0.1.0
 
 * Support doughnat diagrams.

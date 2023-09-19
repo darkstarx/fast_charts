@@ -206,7 +206,6 @@ class BarPainter extends CustomPainter
                   ),
                   newPaint
                 );
-                break;
               case Axis.vertical:
                 oldBar = (
                   RRect.fromLTRBAndCorners(
@@ -219,7 +218,6 @@ class BarPainter extends CustomPainter
                   ),
                   newPaint
                 );
-                break;
             }
           }
           final (oldRect, oldPaint) = oldBar;
@@ -253,7 +251,6 @@ class BarPainter extends CustomPainter
                 bottomLeft: dRect.blRadius,
                 bottomRight: dRect.brRadius,
               );
-              break;
             case Axis.vertical:
               newRect = RRect.fromLTRBAndCorners(
                 dRect.left, layoutData.crossAxisOffset,
@@ -263,7 +260,6 @@ class BarPainter extends CustomPainter
                 bottomLeft: dRect.blRadius,
                 bottomRight: dRect.brRadius,
               );
-              break;
           }
           final rect = RRect.lerp(oldRect, newRect, animation!.value)!;
           layoutStack.bars[segmentId] = (rect, oldPaint);
@@ -290,12 +286,10 @@ class BarPainter extends CustomPainter
         mainLabelWidth = innerRect.width / 2;
         crossLabelWidth = crossAxisWidth ?? innerRect.width / 2;
         domainTextAlign = TextAlign.right;
-        break;
       case Axis.vertical:
         mainLabelWidth = mainAxisWidth ?? innerRect.width / 2;
         crossLabelWidth = innerRect.width / 2;
         domainTextAlign = TextAlign.center;
-        break;
     }
     final domainLabels = <ui.Paragraph>[];
     var domainMaxSize = Size.zero;
@@ -323,13 +317,11 @@ class BarPainter extends CustomPainter
           + axisThickness + crossAxisLabelsOffset;
         mainAxisSize = innerRect.width - crossAxisField;
         crossAxisSize = innerRect.height;
-        break;
       case Axis.vertical:
         crossAxisField = (crossAxisWidth ?? domainMaxSize.height)
           + axisThickness + crossAxisLabelsOffset;
         mainAxisSize = innerRect.height - crossAxisField;
         crossAxisSize = innerRect.width;
-        break;
     }
     var dataExtremes = data.groups
       .map((e) => e.extremes)
@@ -418,7 +410,6 @@ class BarPainter extends CustomPainter
             paragraph
           ));
         }
-        break;
       case Axis.vertical:
         mainAxisField = (mainAxisWidth ?? measureMaxSize.width)
           + axisThickness + mainAxisLabelsOffset;
@@ -454,7 +445,6 @@ class BarPainter extends CustomPainter
             paragraph,
           ));
         }
-        break;
     }
 
     final barThickness = max(
@@ -484,7 +474,6 @@ class BarPainter extends CustomPainter
           ? lowerMainZeroOffset
           : upperMainZeroOffset;
         crossOffset = innerRect.top + barPadding;
-        break;
       case Axis.vertical:
         upperMainZeroOffset = data.inverted
           ? lowerPixels + innerRect.top
@@ -496,7 +485,6 @@ class BarPainter extends CustomPainter
           ? upperMainZeroOffset
           : lowerMainZeroOffset;
         crossOffset = innerRect.left + mainAxisField + barPadding;
-        break;
     }
     for (var i = 0; i < data.groups.length; ++i) {
       final group = data.groups[i];
@@ -530,7 +518,6 @@ class BarPainter extends CustomPainter
             crossOffset + (groupThickness - domainLabel.height) / 2,
           );
           layoutData.crossLabels.add((labelOffset, domainLabel));
-          break;
         case Axis.vertical:
           final labelOffset = Offset(
             crossOffset + (groupThickness - domainLabel.width) / 2,
@@ -538,7 +525,6 @@ class BarPainter extends CustomPainter
               + crossAxisLabelsOffset,
           );
           layoutData.crossLabels.add((labelOffset, domainLabel));
-          break;
       }
       crossOffset += groupSpacing
         + barThickness * group.bars.length
@@ -617,7 +603,6 @@ class BarPainter extends CustomPainter
                 ) {
                   layoutData.labels.add((lblOffset.topLeft, paragraph));
                 }
-                break;
               case LabelPosition.outside:
                 layoutData.labels.add((
                   Offset(
@@ -628,10 +613,8 @@ class BarPainter extends CustomPainter
                   ),
                   paragraph,
                 ));
-                break;
             }
           }
-          break;
         case Axis.vertical:
           final innerRect = Rect.fromLTWH(
             offset,
@@ -674,7 +657,6 @@ class BarPainter extends CustomPainter
                 ) {
                   layoutData.labels.add((lblOffset.topLeft, paragraph));
                 }
-                break;
               case LabelPosition.outside:
                 layoutData.labels.add((
                   Offset(
@@ -683,10 +665,8 @@ class BarPainter extends CustomPainter
                   ),
                   paragraph,
                 ));
-                break;
             }
           }
-          break;
       }
       offset += barThickness + barSpacing;
     }

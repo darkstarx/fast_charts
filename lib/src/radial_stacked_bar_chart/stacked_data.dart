@@ -6,12 +6,14 @@ import '../chart_label.dart';
 class BarChartStacks
 {
   final List<BarChartStack> stacks;
-  final Axis valueAxis;
+  final double maxMeasure;
+  final double minMeasure;
   final bool inverted;
 
   const BarChartStacks({
     required this.stacks,
-    this.valueAxis = Axis.vertical,
+    required this.maxMeasure,
+    required this.minMeasure,
     this.inverted = false,
   });
 }
@@ -19,9 +21,9 @@ class BarChartStacks
 
 class BarChartStack
 {
-  final String domain;
   final List<BarChartSegment> segments;
-  final Radius radius;
+  final bool roundStart;
+  final bool roundEnd;
 
   Iterable<BarChartSegment> get lowerSegments
     => segments.where((e) => e.value < 0);
@@ -71,9 +73,9 @@ class BarChartStack
   double get absSumm => segments.fold(0.0, (s, e) => s + e.value.abs());
 
   const BarChartStack({
-    required this.domain,
     required this.segments,
-    this.radius = Radius.zero,
+    this.roundStart = false,
+    this.roundEnd = false,
   });
 }
 

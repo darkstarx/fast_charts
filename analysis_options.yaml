@@ -4,3 +4,4 @@ linter:
   rules:
     prefer_relative_imports: true
     prefer_single_quotes: true
+    unnecessary_breaks: true

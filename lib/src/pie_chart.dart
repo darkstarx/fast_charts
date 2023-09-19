@@ -15,6 +15,8 @@ class PieChart<D, T> extends StatefulWidget
   final Series<D, T> data;
 
   /// The angle of pie rotation.
+  ///
+  /// It's zero by default.
   final double angle;
 
   /// The offset of outside labels from the edge of the pie.

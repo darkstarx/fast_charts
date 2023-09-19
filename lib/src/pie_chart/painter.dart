@@ -16,20 +16,20 @@ class PiePainter<D> extends CustomPainter
   final ValueListenable<double>? animation;
   final double angle;
   final double labelsOffset;
-  final EdgeInsets padding;
-  final Clip clipBehavior;
   final StrokesConfig? strokes;
   final double holeSize;
+  final EdgeInsets padding;
+  final Clip clipBehavior;
 
   PiePainter({
     required this.data,
     this.animation,
     this.angle = 0.0,
     this.labelsOffset = 0.0,
-    this.padding = EdgeInsets.zero,
-    this.clipBehavior = Clip.hardEdge,
     this.strokes,
     this.holeSize = 0.0,
+    this.padding = EdgeInsets.zero,
+    this.clipBehavior = Clip.hardEdge,
   })
   : super(repaint: animation);
 
@@ -543,7 +543,7 @@ class _Sector
     required final double startAngle,
     required final double sweepAngle,
     required final Paint paint,
-    required double holeSize,
+    required final double holeSize,
   })
   {
     final hs = holeSize.clamp(0.0, 1.0);
