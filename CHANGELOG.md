@@ -1,3 +1,7 @@
+## 0.2.1
+
+* Fix in the pie chart.
+
 ## 0.2.0
 
 * Support radial stacked bar chart.

@@ -324,7 +324,7 @@ class PiePainter<D> extends CustomPainter
   _Pie<D> _getPie(final _LayoutData<D> layoutData)
   {
     final animation = this.animation;
-    if (animation == null) {
+    if (animation == null || _oldPie == null) {
       return layoutData.pie;
     } else {
       final sectors = <D, _Sector>{};
