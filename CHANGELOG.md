@@ -1,3 +1,7 @@
+## 0.2.2
+
+* Move on the external optional package.
+
 ## 0.2.1
 
 * Fix in the pie chart.

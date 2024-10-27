@@ -1,20 +1,6 @@
 import 'dart:math';
 
 
-class Optional<T>
-{
-  T? get value => _value;
-
-  bool get isEmpty => value == null;
-
-  bool get isNotEmpty => value != null;
-
-  Optional([ this._value ]);
-
-  final T? _value;
-}
-
-
 /// Calculates percentage of [values] so the summ of the result values is always
 /// exactly equal to 100.
 ///
