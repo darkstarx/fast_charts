@@ -222,7 +222,7 @@ class _RadialStackedBarSinglePageState extends State<RadialStackedBarSinglePage>
               child: RadialStackedBarChart(
                 data: _data,
                 angle: _angle,
-                backgroundColor: theme.colorScheme.background,
+                backgroundColor: theme.colorScheme.surface,
                 padding: const EdgeInsets.all(16.0),
                 holeSize: _holeSize,
                 arcSpacing: _arcSpacing,
