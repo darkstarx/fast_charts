@@ -1,3 +1,8 @@
+## 0.2.2
+
+* Get rid of deprecated code.
+* Reduce package size.
+
 ## 0.2.1
 
 * Fix in the pie chart.
