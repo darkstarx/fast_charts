@@ -1,7 +1,7 @@
 import 'package:flutter/painting.dart';
+import 'package:optional/optional.dart';
 
 import 'chart_label.dart';
-import 'utils.dart';
 
 
 /// Represents series of [data] with specified [color].
