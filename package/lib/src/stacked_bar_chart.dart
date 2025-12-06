@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'bar_chart/ticks_resolver.dart';
 import 'stacked_bar_chart/stacked_data.dart';
-import 'stacked_bar_chart/painter.dart';
+import 'stacked_bar_chart/viewport.dart';
 import 'series.dart';
 import 'types.dart';
 import 'utils.dart';
@@ -26,6 +26,9 @@ class StackedBarChart<D, T> extends StatefulWidget
 
   /// Converts measure value of type [double] to [String] type to be shown on
   /// the measure axis.
+  ///
+  /// NOTE: Make sure that this function is not recreated on rebuilding your
+  /// widget, otherwise it will lead to unnecessary redrawing of the diagram.
   final MeasureFormatter? measureFormatter;
 
   /// The orientation of the diagram.
@@ -123,6 +126,12 @@ class StackedBarChart<D, T> extends StatefulWidget
   /// It's zero by default.
   final double barPadding;
 
+  /// The thickness of each bar.
+  ///
+  /// If not specified, the thickness is calculated from the size of the chart
+  /// area.
+  final double? barThickness;
+
   /// The padding of the diagram.
   ///
   /// It's zero by default.
@@ -130,7 +139,7 @@ class StackedBarChart<D, T> extends StatefulWidget
 
   /// {@macro flutter.material.Material.clipBehavior}
   ///
-  /// Defaults to [Clip.hardEdge].
+  /// Defaults to [Clip.none].
   final Clip clipBehavior;
 
   /// The radius of each bar.
@@ -172,9 +181,10 @@ class StackedBarChart<D, T> extends StatefulWidget
 
     this.barSpacing = 0.0,
     this.barPadding = 0.0,
+    this.barThickness,
 
     this.padding = EdgeInsets.zero,
-    this.clipBehavior = Clip.hardEdge,
+    this.clipBehavior = Clip.none,
     this.radius = Radius.zero,
     this.animationDuration = Duration.zero,
     this.animationCurve = Curves.easeOut,
@@ -255,10 +265,9 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
   @override
   Widget build(final BuildContext context)
   {
-    final theme = Theme.of(context);
-    return LayoutBuilder(builder: (context, constraints) => CustomPaint(
-      size: constraints.biggest,
-      painter: BarPainter(
+    final colorScheme = ColorScheme.of(context);
+    return Scrollable(
+      viewportBuilder: (context, offset) => StackedBarChartViewport(
         data: _stacks,
         animation: _currentAnimation,
         ticksResolver: _ticksResolver,
@@ -266,16 +275,16 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
         showZeroValues: widget.showZeroValues,
         mainAxisTextStyle: widget.mainAxisTextStyle ?? TextStyle(
           fontSize: 12.0,
-          color: theme.colorScheme.onSurface,
+          color: colorScheme.onSurface,
         ),
         crossAxisTextStyle: widget.crossAxisTextStyle ?? TextStyle(
           fontSize: 12.0,
-          color: theme.colorScheme.onSurface,
+          color: colorScheme.onSurface,
         ),
-        axisColor: widget.axisColor ?? theme.colorScheme.onSurface,
+        axisColor: widget.axisColor ?? colorScheme.onSurface,
         axisThickness: widget.axisThickness,
         guideLinesColor: widget.guideLinesColor
-          ?? theme.colorScheme.onSurface.withOpacity(0.1),
+          ?? colorScheme.onSurface.withValues(alpha: 0.1),
         guideLinesThickness: widget.guideLinesThickness,
         mainAxisLabelsOffset: widget.mainAxisLabelsOffset,
         crossAxisLabelsOffset: widget.crossAxisLabelsOffset,
@@ -285,10 +294,16 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
         showCrossAxisLine: widget.showCrossAxisLine,
         barPadding: widget.barPadding,
         barSpacing: widget.barSpacing,
+        barThickness: widget.barThickness,
         padding: widget.padding,
         clipBehavior: widget.clipBehavior,
+        viewportOffset: offset,
       ),
-    ));
+      axisDirection: switch (widget.valueAxis) {
+        Axis.horizontal => AxisDirection.down,
+        Axis.vertical => AxisDirection.right,
+      },
+    );
   }
 
   bool _dataIsDifferent(

@@ -24,6 +24,9 @@ class BarChart<D, T> extends StatefulWidget
 
   /// Converts measure value of type [double] to [String] type to be shown on
   /// the measure axis.
+  /// 
+  /// NOTE: Make sure that this function is not recreated on rebuilding your
+  /// widget, otherwise it will lead to unnecessary redrawing of the diagram.
   final MeasureFormatter? measureFormatter;
 
   /// The orientation of the diagram.
@@ -280,7 +283,7 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
         axisColor: widget.axisColor ?? theme.colorScheme.onSurface,
         axisThickness: widget.axisThickness,
         guideLinesColor: widget.guideLinesColor
-          ?? theme.colorScheme.onSurface.withOpacity(0.1),
+          ?? theme.colorScheme.onSurface.withValues(alpha: 0.1),
         guideLinesThickness: widget.guideLinesThickness,
         mainAxisLabelsOffset: widget.mainAxisLabelsOffset,
         crossAxisLabelsOffset: widget.crossAxisLabelsOffset,

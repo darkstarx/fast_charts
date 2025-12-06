@@ -21,9 +21,10 @@ class BarTicksResolver implements TicksResolver
   })
   {
     final minTickCount = minValue < 0 && maxValue > 0 ? 3 : 2;
-    final maxTickCount = max(
-      minTickCount, (axisSize / minSpacing).floor() + 1
-    );
+    final floatTickCount = axisSize / minSpacing;
+    final maxTickCount = floatTickCount.isFinite
+      ? max(minTickCount, (axisSize / minSpacing).floor() + 1)
+      : minTickCount;
 
     var tickValues = <double>[];
     var foundPreferredTicks = false;

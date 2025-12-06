@@ -18,6 +18,8 @@ typedef Data<D, T> = List<Series<D, T>>;
 
 class _StackedBarSinglePageState extends State<StackedBarSinglePage>
 {
+  final number = NumberFormat.compact(locale: 'en');
+
   static final random = Random();
 
   static int generateRndInt({
@@ -37,7 +39,10 @@ class _StackedBarSinglePageState extends State<StackedBarSinglePage>
     }
   }
 
-  static const domains = [ 'alpha', 'beta', 'gamma', 'delta', 'epsilon' ];
+  static const domains = [
+    'alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta', 'theta',
+    'iota', 'kappa',
+  ];
   static const colors1 = [
     Color(0xFFF48FB1),
     Color(0xFF69F0AE),
@@ -99,7 +104,7 @@ class _StackedBarSinglePageState extends State<StackedBarSinglePage>
   {
     return Scaffold(
       appBar: AppBar(title: const Text('Single stacked bar chart')),
-      body: card,
+      body: Center(child: card),
       floatingActionButton: FloatingActionButton(
         onPressed: () => setState(() {
           _data = _data == data1 ? data2 : data1;
@@ -111,25 +116,41 @@ class _StackedBarSinglePageState extends State<StackedBarSinglePage>
 
   Widget get card
   {
-    final number = NumberFormat.compact(locale: 'ru');
-    return Card(
-      child: SizedBox(
-        height: 300,
-        child: StackedBarChart(
-          data: _data,
-          measureFormatter: number.format,
-          valueAxis: Axis.vertical,
-          inverted: false,
-          minTickSpacing: 40,
-          barPadding: 10,
-          barSpacing: 10,
-          padding: const EdgeInsets.all(16.0),
-          radius: const Radius.circular(16),
-          animationDuration: const Duration(milliseconds: 350),
+    return Column(
+      spacing: 20,
+      children: [
+        Flexible(
+          child: Card(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 300),
+              child: StackedBarChart(
+                data: _data,
+                measureFormatter: number.format,
+                valueAxis: Axis.vertical,
+                inverted: false,
+                minTickSpacing: 40,
+                barPadding: 10,
+                barSpacing: 10,
+                barThickness: _autoSize ? null : 60,
+                padding: const EdgeInsets.all(16.0),
+                radius: const Radius.circular(16),
+                animationDuration: const Duration(milliseconds: 350),
+              ),
+            ),
+          ),
         ),
-      ),
+        CheckboxListTile(
+          title: const Text('Autofit'),
+          subtitle: const Text(
+            'Autosize stacks width so that all of them fit into the widget.'
+          ),
+          value: _autoSize,
+          onChanged: (value) => setState(() => _autoSize = value == true),
+        ),
+      ],
     );
   }
 
   late Data<String, int> _data;
+  var _autoSize = false;
 }

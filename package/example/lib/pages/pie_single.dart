@@ -126,24 +126,26 @@ class _PieSinglePageState extends State<PieSinglePage>
             }),
           ),
         ]),
-        Row(children: [
-          Expanded(
-            child: RadioListTile<LabelPosition>(
-              title: const Text('Inside'),
-              value: LabelPosition.inside,
-              groupValue: _labelsPosition,
-              onChanged: _labelsVisible ? setLabelPosition : null,
+        RadioGroup(
+          groupValue: _labelsPosition,
+          onChanged: setLabelPosition,
+          child: Row(children: [
+            Expanded(
+              child: RadioListTile<LabelPosition>(
+                title: const Text('Inside'),
+                value: LabelPosition.inside,
+                enabled: _labelsVisible,
+              ),
             ),
-          ),
-          Expanded(
-            child: RadioListTile<LabelPosition>(
-              title: const Text('Outside'),
-              value: LabelPosition.outside,
-              groupValue: _labelsPosition,
-              onChanged: _labelsVisible ? setLabelPosition : null,
+            Expanded(
+              child: RadioListTile<LabelPosition>(
+                title: const Text('Outside'),
+                value: LabelPosition.outside,
+                enabled: _labelsVisible,
+              ),
             ),
-          ),
-        ]),
+          ]),
+        ),
         Row(children: [
           const SizedBox(width: 52.0, child: Text('Depth')),
           if (_labelsPosition == LabelPosition.inside) Expanded(child: Slider(
