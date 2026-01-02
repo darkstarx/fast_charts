@@ -9,16 +9,15 @@ import 'package:flutter/widgets.dart';
 import '../label_position.dart';
 import '../ticks_resolver.dart';
 import '../types.dart';
-import 'stacked_data.dart';
+import 'bar_data.dart';
 
 
-class StackedBarChartViewport extends LeafRenderObjectWidget
+class GroupedBarChartViewport extends LeafRenderObjectWidget
 {
-  final BarChartStacks data;
+  final ChartBars data;
   final ValueListenable<double>? animation;
   final TicksResolver ticksResolver;
   final MeasureFormatter? measureFormatter;
-  final bool showZeroValues;
   final TextStyle mainAxisTextStyle;
   final TextStyle crossAxisTextStyle;
   final Color axisColor;
@@ -34,17 +33,17 @@ class StackedBarChartViewport extends LeafRenderObjectWidget
   final double barPadding;
   final double barSpacing;
   final double? barThickness;
+  final double groupSpacing;
   final EdgeInsets padding;
   final Clip clipBehavior;
   final ViewportOffset viewportOffset;
 
-  const StackedBarChartViewport({
+  const GroupedBarChartViewport({
     super.key,
     required this.data,
     this.animation,
     required this.ticksResolver,
     this.measureFormatter,
-    this.showZeroValues = false,
     required this.mainAxisTextStyle,
     required this.crossAxisTextStyle,
     required this.axisColor,
@@ -60,6 +59,7 @@ class StackedBarChartViewport extends LeafRenderObjectWidget
     this.barPadding = 0.0,
     this.barSpacing = 0.0,
     this.barThickness,
+    this.groupSpacing = 0.0,
     this.padding = EdgeInsets.zero,
     this.clipBehavior = Clip.hardEdge,
     required this.viewportOffset,
@@ -68,12 +68,11 @@ class StackedBarChartViewport extends LeafRenderObjectWidget
   @override
   RenderObject createRenderObject(final BuildContext context)
   {
-    return StackedBarChartViewportRenderObject(
+    return GroupedBarChartViewportRenderObject(
       data: data,
       animation: animation,
       ticksResolver: ticksResolver,
       measureFormatter: measureFormatter,
-      showZeroValues: showZeroValues,
       mainAxisTextStyle: mainAxisTextStyle,
       crossAxisTextStyle: crossAxisTextStyle,
       axisColor: axisColor,
@@ -89,6 +88,7 @@ class StackedBarChartViewport extends LeafRenderObjectWidget
       barPadding: barPadding,
       barSpacing: barSpacing,
       barThickness: barThickness,
+      groupSpacing: groupSpacing,
       padding: padding,
       clipBehavior: clipBehavior,
       viewportOffset: viewportOffset,
@@ -97,7 +97,7 @@ class StackedBarChartViewport extends LeafRenderObjectWidget
 
   @override
   void updateRenderObject(final BuildContext context,
-    final StackedBarChartViewportRenderObject renderObject,
+    final GroupedBarChartViewportRenderObject renderObject,
   )
   {
     renderObject
@@ -105,7 +105,6 @@ class StackedBarChartViewport extends LeafRenderObjectWidget
       ..animation = animation
       ..ticksResolver = ticksResolver
       ..measureFormatter = measureFormatter
-      ..showZeroValues = showZeroValues
       ..mainAxisTextStyle = mainAxisTextStyle
       ..crossAxisTextStyle = crossAxisTextStyle
       ..axisColor = axisColor
@@ -121,6 +120,7 @@ class StackedBarChartViewport extends LeafRenderObjectWidget
       ..barPadding = barPadding
       ..barSpacing = barSpacing
       ..barThickness = barThickness
+      ..groupSpacing = groupSpacing
       ..padding = padding
       ..clipBehavior = clipBehavior
       ..viewportOffset = viewportOffset
@@ -129,10 +129,10 @@ class StackedBarChartViewport extends LeafRenderObjectWidget
 }
 
 
-class StackedBarChartViewportRenderObject extends RenderBox
+class GroupedBarChartViewportRenderObject extends RenderBox
 {
-  BarChartStacks get data => _data;
-  set data(final BarChartStacks value)
+  ChartBars get data => _data;
+  set data(final ChartBars value)
   {
     if (_data == value) return;
     _data = value;
@@ -166,14 +166,6 @@ class StackedBarChartViewportRenderObject extends RenderBox
   {
     if (_measureFormatter == value) return;
     _measureFormatter = value;
-    markNeedsRebuild();
-  }
-
-  bool get showZeroValues => _showZeroValues;
-  set showZeroValues(final bool value)
-  {
-    if (_showZeroValues == value) return;
-    _showZeroValues = value;
     markNeedsRebuild();
   }
 
@@ -273,7 +265,6 @@ class StackedBarChartViewportRenderObject extends RenderBox
     markNeedsRebuild();
   }
 
-
   double get barPadding => _barPadding;
   set barPadding(final double value)
   {
@@ -295,6 +286,14 @@ class StackedBarChartViewportRenderObject extends RenderBox
   {
     if (_barThickness == value) return;
     _barThickness = value;
+    markNeedsRebuild();
+  }
+
+  double get groupSpacing => _groupSpacing;
+  set groupSpacing(final double value)
+  {
+    if (_groupSpacing == value) return;
+    _groupSpacing = value;
     markNeedsRebuild();
   }
 
@@ -331,36 +330,35 @@ class StackedBarChartViewportRenderObject extends RenderBox
   @override
   bool get isRepaintBoundary => true;
 
-  StackedBarChartViewportRenderObject({
-    required BarChartStacks data,
-    ValueListenable<double>? animation,
-    required TicksResolver ticksResolver,
-    MeasureFormatter? measureFormatter,
-    bool showZeroValues = false,
-    required TextStyle mainAxisTextStyle,
-    required TextStyle crossAxisTextStyle,
-    required Color axisColor,
-    double axisThickness = 1.0,
-    required Color guideLinesColor,
-    double guideLinesThickness = 1.0,
-    double mainAxisLabelsOffset = 2.0,
-    double crossAxisLabelsOffset = 2.0,
-    double? mainAxisWidth,
-    double? crossAxisWidth,
-    bool showMainAxisLine = false,
-    bool showCrossAxisLine = true,
-    double barPadding = 0.0,
-    double barSpacing = 0.0,
-    double? barThickness,
-    EdgeInsets padding = EdgeInsets.zero,
-    Clip clipBehavior = Clip.hardEdge,
-    required ViewportOffset viewportOffset,
+  GroupedBarChartViewportRenderObject({
+    required final ChartBars data,
+    final ValueListenable<double>? animation,
+    required final TicksResolver ticksResolver,
+    final MeasureFormatter? measureFormatter,
+    required final TextStyle mainAxisTextStyle,
+    required final TextStyle crossAxisTextStyle,
+    required final Color axisColor,
+    final double axisThickness = 1.0,
+    required final Color guideLinesColor,
+    final double guideLinesThickness = 1.0,
+    final double mainAxisLabelsOffset = 2.0,
+    final double crossAxisLabelsOffset = 2.0,
+    final double? mainAxisWidth,
+    final double? crossAxisWidth,
+    final bool showMainAxisLine = false,
+    final bool showCrossAxisLine = true,
+    final double barPadding = 0.0,
+    final double barSpacing = 0.0,
+    final double? barThickness,
+    final double groupSpacing = 0.0,
+    final EdgeInsets padding = EdgeInsets.zero,
+    final Clip clipBehavior = Clip.hardEdge,
+    required final ViewportOffset viewportOffset,
   })
   : _data = data
   , _animation = animation
   , _ticksResolver = ticksResolver
   , _measureFormatter = measureFormatter
-  , _showZeroValues = showZeroValues
   , _mainAxisTextStyle = mainAxisTextStyle
   , _crossAxisTextStyle = crossAxisTextStyle
   , _axisColor = axisColor
@@ -376,6 +374,7 @@ class StackedBarChartViewportRenderObject extends RenderBox
   , _barPadding = barPadding
   , _barSpacing = barSpacing
   , _barThickness = barThickness
+  , _groupSpacing = groupSpacing
   , _padding = padding
   , _clipBehavior = clipBehavior
   , _viewportOffset = viewportOffset
@@ -398,6 +397,30 @@ class StackedBarChartViewportRenderObject extends RenderBox
   }
 
   @override
+  double computeMinIntrinsicWidth(final double height)
+  {
+    return constraints.maxWidth;
+  }
+
+  @override
+  double computeMaxIntrinsicWidth(final double height)
+  {
+    return constraints.maxWidth;
+  }
+
+  @override
+  double computeMinIntrinsicHeight(final double width)
+  {
+    return constraints.maxHeight;
+  }
+
+  @override
+  double computeMaxIntrinsicHeight(final double width)
+  {
+    return constraints.maxHeight;
+  }
+
+  @override
   void performLayout()
   {
     final newSize = constraints.biggest;
@@ -417,7 +440,8 @@ class StackedBarChartViewportRenderObject extends RenderBox
           barPadding: barPadding,
           barSpacing: barSpacing,
           barThickness: barThickness!,
-          stacksNumber: data.stacks.length,
+          groupSpacing: groupSpacing,
+          groups: data.groups,
         );
     const minScrollExtent = 0.0;
     final maxScrollExtent = max(
@@ -450,7 +474,7 @@ class StackedBarChartViewportRenderObject extends RenderBox
       }
       return true;
     }());
-    final layoutData = _layoutData ?? _buildLayout();
+    final layoutData = _layoutData ??= _buildLayout();
     final axisPaint = Paint()
       ..color = axisColor
       ..strokeWidth = axisThickness
@@ -498,33 +522,26 @@ class StackedBarChartViewportRenderObject extends RenderBox
       }
       canvas.drawParagraph(label.paragraph, label.offset - viewOffset);
     }
-    final stacks = _stacks = _getStacks(layoutData);
-    final stackLabels = <LayoutLabel>[];
-    for (final stack in stacks.values) {
-      if (stack.segments.isEmpty) continue;
-      stackLabels.addAll(stack.labels);
-      final stackRRect = stack.clipRRect.shift(-viewOffset);
-      if (barThickness != null
-        && !layoutData.scrollAreaClipRect.overlaps(stackRRect.outerRect)
-      ) {
-        continue;
-      }
-      final clip = !stackRRect.isRect;
-      if (clip) {
-        canvas.save();
-        canvas.clipRRect(stackRRect);
-      }
-      for (final entry in stack.segments.entries) {
-        final segment = entry.value;
-        final (rect, paint) = segment;
-        canvas.drawRect(rect.shift(-viewOffset), paint);
-      }
-      if (clip) {
-        canvas.restore();
+    final barGroups = _barGroups = _getBars(layoutData);
+    final barGroupLabels = <LayoutLabel>[];
+    for (final barGroup in barGroups.values) {
+      if (barGroup.bars.isEmpty) continue;
+      for (final bar in barGroup.bars.values) {
+        final label = bar.label;
+        if (label != null) {
+          barGroupLabels.add(label);
+        }
+        final barRRect = bar.rect.shift(-viewOffset);
+        if (barThickness != null
+          && !layoutData.scrollAreaClipRect.overlaps(barRRect.outerRect)
+        ) {
+          continue;
+        }
+        canvas.drawRRect(barRRect, bar.paint);
       }
     }
     if (animation == null) {
-      for (final label in stackLabels) {
+      for (final label in barGroupLabels) {
         final offset = label.offset - viewOffset;
         if (barThickness != null) {
           final rect = label.rect.shift(-viewOffset);
@@ -545,7 +562,7 @@ class StackedBarChartViewportRenderObject extends RenderBox
 
   void markNeedsRebuild()
   {
-    _oldStacks = _stacks;
+    _oldBarGroups = _barGroups;
     _layoutData = null;
     markNeedsLayout();
   }
@@ -576,13 +593,13 @@ class StackedBarChartViewportRenderObject extends RenderBox
     }
     final domainLabels = <ui.Paragraph>[];
     var domainMaxSize = Size.zero;
-    for (final stack in data.stacks) {
+    for (final group in data.groups) {
       final labelBuilder = ui.ParagraphBuilder(ui.ParagraphStyle(
         textDirection: TextDirection.ltr,
         textAlign: domainTextAlign,
       ));
       labelBuilder.pushStyle(mainAxisTextStyle.getTextStyle());
-      labelBuilder.addText(stack.domain);
+      labelBuilder.addText(group.domain);
       final label = labelBuilder.build();
       label.layout(ui.ParagraphConstraints(width: crossLabelWidth));
       domainMaxSize = Size(
@@ -606,8 +623,8 @@ class StackedBarChartViewportRenderObject extends RenderBox
         mainAxisSize = innerRect.height - crossAxisField;
         crossAxisSize = innerRect.width;
     }
-    var dataExtremes = data.stacks
-      .map((e) => e.summs)
+    var dataExtremes = data.groups
+      .map((e) => e.extremes)
       .fold(
         (lower: 0.0, upper: 0.0),
         (minmax, lowerupper) => (
@@ -757,12 +774,13 @@ class StackedBarChartViewportRenderObject extends RenderBox
     final barThickness = this.barThickness ?? layoutMetrics.calcBarThickness(
       barPadding: barPadding,
       barSpacing: barSpacing,
-      stacksNumber: data.stacks.length,
+      groupSpacing: groupSpacing,
+      groups: data.groups,
     );
 
     final double upperMainZeroOffset;
     final double lowerMainZeroOffset;
-    final double zeroOnMainAxis;
+    final double crossAxisOffset;
     final Rect scrollAreaClipRect;
     double crossOffset;
     switch (data.valueAxis) {
@@ -773,7 +791,7 @@ class StackedBarChartViewportRenderObject extends RenderBox
         lowerMainZeroOffset = data.inverted
           ? upperPixels + innerRect.left + crossAxisField
           : upperPixels - innerRect.left - crossAxisField;
-        zeroOnMainAxis = data.inverted
+        crossAxisOffset = data.inverted
           ? lowerMainZeroOffset
           : upperMainZeroOffset;
         scrollAreaClipRect = innerRect.topLeft
@@ -786,77 +804,37 @@ class StackedBarChartViewportRenderObject extends RenderBox
         lowerMainZeroOffset = data.inverted
           ? upperPixels - innerRect.top
           : upperPixels + innerRect.top;
-        zeroOnMainAxis = data.inverted
+        crossAxisOffset = data.inverted
           ? upperMainZeroOffset
           : lowerMainZeroOffset;
         scrollAreaClipRect = Offset(innerRect.left + mainAxisField, innerRect.top)
           & Size(innerRect.width - mainAxisField, innerRect.height);
         crossOffset = innerRect.left + mainAxisField + barPadding;
     }
-    for (var i = 0; i < data.stacks.length; ++i) {
-      final stack = data.stacks[i];
+    for (var i = 0; i < data.groups.length; ++i) {
+      final group = data.groups[i];
       final domainLabel = layoutMetrics.domainLabels[i];
-      final List<(int, BarChartSegment)> lowerSegments, upperSegments;
-      if (showZeroValues) {
-        final divided = stack.dividedSegments;
-        lowerSegments = divided.lower;
-        upperSegments = divided.zero.followedBy(divided.upper).toList();
-      } else {
-        final divided = stack.dividedSegments;
-        lowerSegments = divided.lower;
-        upperSegments = divided.upper;
-      }
-      final barMargin = (
-        start: i == 0 ? barPadding : barSpacing / 2,
-        end: i == data.stacks.length - 1 ? barPadding : barSpacing / 2,
+
+      final groupThickness = barThickness * group.bars.length
+        + barSpacing * (group.bars.length - 1);
+      final groupMargin = (
+        start: i == 0 ? barPadding : groupSpacing / 2,
+        end: i == data.groups.length - 1 ? barPadding : groupSpacing / 2,
       );
-      final startRadius = upperSegments.isEmpty
-        ? Radius.zero
-        : stack.radius;
-      final endRadius = lowerSegments.isEmpty
-        ? Radius.zero
-        : stack.radius;
-      final BorderRadius borderRadius;
-      switch (data.valueAxis) {
-        case Axis.horizontal:
-          borderRadius = BorderRadius.horizontal(
-            left: data.inverted ? startRadius : endRadius,
-            right: data.inverted ? endRadius : startRadius,
-          );
-        case Axis.vertical:
-          borderRadius = BorderRadius.vertical(
-            top: data.inverted ? endRadius : startRadius,
-            bottom: data.inverted ? startRadius : endRadius,
-          );
-      }
-      _buildSections(layoutData,
-        stackIndex: i,
-        segments: upperSegments,
+      _buildBarGroups(layoutData,
+        groupIndex: i,
+        bars: group.bars,
         valueAxis: data.valueAxis,
         inverted: data.inverted,
         dataRange: layoutMetrics.dataRange,
         mainAxisSize: layoutMetrics.mainAxisSize,
-        mainZeroOffset: upperMainZeroOffset,
+        crossAxisOffset: crossAxisOffset,
         crossOffset: crossOffset,
         barThickness: barThickness,
-        barMargin: barMargin,
+        barSpacing: barSpacing,
+        groupMargin: groupMargin,
       );
-      _buildSections(layoutData,
-        stackIndex: i,
-        segments: lowerSegments,
-        valueAxis: data.valueAxis,
-        inverted: !data.inverted,
-        dataRange: layoutMetrics.dataRange,
-        mainAxisSize: layoutMetrics.mainAxisSize,
-        mainZeroOffset: lowerMainZeroOffset,
-        crossOffset: crossOffset,
-        barThickness: barThickness,
-        barMargin: barMargin,
-      );
-      final layoutStack = layoutData.stacks[i];
-      if (layoutStack != null) {
-        layoutData.stacks[i] = layoutStack.withBorderRadius(borderRadius);
-      }
+
       final labelSize = Size(domainLabel.width, domainLabel.height);
       final Offset labelOffset;
       final Rect labelRect;
@@ -865,7 +843,7 @@ class StackedBarChartViewportRenderObject extends RenderBox
           labelOffset = Offset(
             innerRect.left + crossAxisField - domainLabel.width
               - axisThickness / 2 - crossAxisLabelsOffset,
-            crossOffset + (barThickness - domainLabel.height) / 2,
+            crossOffset + (groupThickness - domainLabel.height) / 2,
           );
           final rect = labelOffset & labelSize;
           labelRect = Rect.fromLTRB(
@@ -876,7 +854,7 @@ class StackedBarChartViewportRenderObject extends RenderBox
           );
         case Axis.vertical:
           labelOffset = Offset(
-            crossOffset + (barThickness - domainLabel.width) / 2,
+            crossOffset + (groupThickness - domainLabel.width) / 2,
             innerRect.top + layoutMetrics.mainAxisSize + axisThickness / 2
               + crossAxisLabelsOffset,
           );
@@ -892,174 +870,151 @@ class StackedBarChartViewportRenderObject extends RenderBox
         rect: labelRect,
         paragraph: domainLabel,
       ));
-      crossOffset += barSpacing + barThickness;
+      crossOffset += groupSpacing
+        + barThickness * group.bars.length
+        + barSpacing * (group.bars.length - 1);
     }
     return layoutData.copyWith(
+      crossAxisOffset: crossAxisOffset,
       scrollAreaClipRect: scrollAreaClipRect,
-      layoutMetrics: layoutMetrics,
-      crossAxisOffset: zeroOnMainAxis,
     );
   }
 
-  Map<int, LayoutStack> _getStacks(final LayoutData layoutData)
+  Map<int, LayoutBarGroup> _getBars(final LayoutData layoutData)
   {
     if (animation == null) {
-      return layoutData.stacks;
+      return layoutData.barGroups;
     } else {
-      final result = <int, LayoutStack>{};
-      final oldStacks = _oldStacks;
-      if (oldStacks != null) {
-        for (final entry in oldStacks.entries) {
-          if (layoutData.stacks.containsKey(entry.key)) continue;
-          final oldStack = entry.value;
-          final oldClipRRect = oldStack.clipRRect;
-          final oldStackCenter = switch (data.valueAxis) {
-            Axis.horizontal => Offset(
-              layoutData.crossAxisOffset, oldClipRRect.center.dy,
-            ),
-            Axis.vertical => Offset(
-              oldClipRRect.center.dx, layoutData.crossAxisOffset,
-            ),
-          };
-          final zeroRRect = RRect.fromRectAndCorners(
-            Rect.fromCenter(center: oldStackCenter, width: 0, height: 0),
-            topLeft: oldClipRRect.tlRadius,
-            topRight: oldClipRRect.trRadius,
-            bottomLeft: oldClipRRect.blRadius,
-            bottomRight: oldClipRRect.brRadius,
+      final result = <int, LayoutBarGroup>{};
+      final oldBarGroups = _oldBarGroups;
+      if (oldBarGroups != null) {
+        for (final entry in oldBarGroups.entries) {
+          if (layoutData.barGroups.containsKey(entry.key)) continue;
+          final group = entry.value;
+          final layoutBarGroup = result.putIfAbsent(entry.key,
+            () => LayoutBarGroup.empty(),
           );
-          final rrect = RRect.lerp(oldClipRRect, zeroRRect, animation!.value)!;
-          final layoutStack = result.putIfAbsent(entry.key,
-            () => LayoutStack.empty(),
-          );
-          Rect? stackRect;
-          for (final entry in oldStack.segments.entries) {
-            final segment = entry.value;
-            final (oldRect, oldPaint) = segment;
-            final newRect = Rect.fromCenter(center: oldStackCenter,
-              width: 0, height: 0,
+          for (final entry in group.bars.entries) {
+            final oldBar = entry.value;
+            final oldBarCenter = switch (data.valueAxis) {
+              Axis.horizontal => Offset(
+                layoutData.crossAxisOffset, oldBar.rect.center.dy,
+              ),
+              Axis.vertical => Offset(
+                oldBar.rect.center.dx, layoutData.crossAxisOffset,
+              ),
+            };
+            final newBarRect = RRect.fromRectAndCorners(
+              Rect.fromCenter(center: oldBarCenter, width: 0, height: 0),
+              topLeft: oldBar.rect.tlRadius,
+              topRight: oldBar.rect.trRadius,
+              bottomLeft: oldBar.rect.blRadius,
+              bottomRight: oldBar.rect.brRadius,
             );
-            final newColor = oldPaint.color.withAlpha(0);
-            final rect = Rect.lerp(oldRect, newRect, animation!.value)!;
+            final newColor = oldBar.paint.color.withAlpha(0);
+            final rect = RRect.lerp(oldBar.rect, newBarRect, animation!.value)!;
             final paint = Paint()
-              ..color = Color.lerp(oldPaint.color, newColor, animation!.value)!
+              ..color = Color.lerp(oldBar.paint.color, newColor, animation!.value)!
               ..style = PaintingStyle.fill
             ;
-            if (stackRect == null) {
-              stackRect = rect;
-            } else {
-              stackRect = stackRect.expandToInclude(rect);
-            }
-            layoutStack.segments[entry.key] = (rect, paint);
+            layoutBarGroup.bars[entry.key] = LayoutBar(rect: rect, paint: paint);
           }
-          result[entry.key] = LayoutStack(
-            segments: layoutStack.segments,
-            labels: layoutStack.labels,
-            clipRRect: RRect.fromRectAndCorners(stackRect!,
-              topLeft: rrect.tlRadius,
-              bottomLeft: rrect.blRadius,
-              topRight: rrect.trRadius,
-              bottomRight: rrect.brRadius,
-            )
+          result[entry.key] = LayoutBarGroup(
+            bars: layoutBarGroup.bars,
           );
         }
       }
-      for (final entry in layoutData.stacks.entries) {
-        final stackId = entry.key;
-        final stack = entry.value;
-        final oldStack = _oldStacks?[stackId];
-        final oldSegments = oldStack?.segments ?? {};
-        final anyOldSegment = oldSegments.isEmpty
+      for (final entry in layoutData.barGroups.entries) {
+        final groupId = entry.key;
+        final group = entry.value;
+        final oldGroup = _oldBarGroups?[groupId];
+        final oldBars = oldGroup?.bars ?? {};
+        final anyOldBar = oldBars.isEmpty
           ? null
-          : oldSegments.values.first;
-        final rrect = oldStack == null
-          ? stack.clipRRect
-          : RRect.lerp(oldStack.clipRRect, stack.clipRRect, animation!.value)!;
-        final layoutStack = result.putIfAbsent(stackId,
-          () => LayoutStack.empty(),
+          : oldBars.values.first;
+        final layoutBarGroup = result.putIfAbsent(groupId,
+          () => LayoutBarGroup.empty(),
         );
-        Rect? stackRect;
-        for (final entry in stack.segments.entries) {
-          final segmentId = entry.key;
-          final segment = entry.value;
-          final (newRect, newPaint) = segment;
-          var oldSegment = oldSegments[segmentId];
-          if (oldSegment == null) {
-            final (dRect, _) = anyOldSegment ?? segment;
+        for (final entry in group.bars.entries) {
+          final barId = entry.key;
+          final bar = entry.value;
+          final (newRect, newPaint) = (bar.rect, bar.paint);
+          var oldBar = oldBars[barId];
+          if (oldBar == null) {
+            final dRect = (anyOldBar ?? bar).rect;
             switch (data.valueAxis) {
               case Axis.horizontal:
-                oldSegment = (
-                  Rect.fromLTRB(
+                oldBar = LayoutBar(
+                  rect: RRect.fromLTRBAndCorners(
                     layoutData.crossAxisOffset, dRect.top,
                     layoutData.crossAxisOffset, dRect.bottom,
+                    topLeft: dRect.tlRadius,
+                    topRight: dRect.trRadius,
+                    bottomLeft: dRect.blRadius,
+                    bottomRight: dRect.brRadius,
                   ),
-                  newPaint
+                  paint: newPaint,
                 );
               case Axis.vertical:
-                oldSegment = (
-                  Rect.fromLTRB(
+                oldBar = LayoutBar(
+                  rect: RRect.fromLTRBAndCorners(
                     dRect.left, layoutData.crossAxisOffset,
                     dRect.right, layoutData.crossAxisOffset,
+                    topLeft: dRect.tlRadius,
+                    topRight: dRect.trRadius,
+                    bottomLeft: dRect.blRadius,
+                    bottomRight: dRect.brRadius,
                   ),
-                  newPaint
+                  paint: newPaint,
                 );
             }
           }
-          final (oldRect, oldPaint) = oldSegment;
-          final rect = Rect.lerp(oldRect, newRect, animation!.value)!;
+          final (oldRect, oldPaint) = (oldBar.rect, oldBar.paint);
+          final rect = RRect.lerp(oldRect, newRect, animation!.value)!;
           final paint = Paint()
             ..color = Color.lerp(oldPaint.color, newPaint.color,
                 animation!.value
               )!
             ..style = PaintingStyle.fill
           ;
-          if (stackRect == null) {
-            stackRect = rect;
-          } else {
-            stackRect = stackRect.expandToInclude(rect);
-          }
-          layoutStack.segments[segmentId] = (rect, paint);
+          layoutBarGroup.bars[barId] = LayoutBar(rect: rect, paint: paint);
         }
-        final anyNewSegment = stack.segments.isEmpty
+        final anyNewBar = group.bars.isEmpty
           ? null
-          : stack.segments.values.first;
-        for (final entry in oldSegments.entries.where(
-          (e) => !stack.segments.containsKey(e.key)
+          : group.bars.values.first;
+        for (final entry in oldBars.entries.where(
+          (e) => !group.bars.containsKey(e.key)
         )) {
-          final segmentId = entry.key;
-          final oldSegment = entry.value;
-          final (oldRect, oldPaint) = oldSegment;
-          final (dRect, _) = anyNewSegment ?? oldSegment;
-          final Rect newRect;
+          final barId = entry.key;
+          final oldBar = entry.value;
+          final (oldRect, oldPaint) = (oldBar.rect, oldBar.paint);
+          final dRect = (anyNewBar ?? oldBar).rect;
+          final RRect newRect;
           switch (data.valueAxis) {
             case Axis.horizontal:
-              newRect = Rect.fromLTRB(
+              newRect = RRect.fromLTRBAndCorners(
                 layoutData.crossAxisOffset, dRect.top,
                 layoutData.crossAxisOffset, dRect.bottom,
+                topLeft: dRect.tlRadius,
+                topRight: dRect.trRadius,
+                bottomLeft: dRect.blRadius,
+                bottomRight: dRect.brRadius,
               );
             case Axis.vertical:
-              newRect = Rect.fromLTRB(
+              newRect = RRect.fromLTRBAndCorners(
                 dRect.left, layoutData.crossAxisOffset,
                 dRect.right, layoutData.crossAxisOffset,
+                topLeft: dRect.tlRadius,
+                topRight: dRect.trRadius,
+                bottomLeft: dRect.blRadius,
+                bottomRight: dRect.brRadius,
               );
           }
-          final rect = Rect.lerp(oldRect, newRect, animation!.value)!;
-          if (stackRect == null) {
-            stackRect = rect;
-          } else {
-            stackRect = stackRect.expandToInclude(rect);
-          }
-          layoutStack.segments[segmentId] = (rect, oldPaint);
+          final rect = RRect.lerp(oldRect, newRect, animation!.value)!;
+          layoutBarGroup.bars[barId] = LayoutBar(rect: rect, paint: oldPaint);
         }
-        result[stackId] = LayoutStack(
-          segments: layoutStack.segments,
-          labels: layoutStack.labels,
-          clipRRect: RRect.fromRectAndCorners(stackRect!,
-            topLeft: rrect.tlRadius,
-            bottomLeft: rrect.blRadius,
-            topRight: rrect.trRadius,
-            bottomRight: rrect.brRadius,
-          )
+        result[groupId] = LayoutBarGroup(
+          bars: layoutBarGroup.bars,
         );
       }
       return result;
@@ -1071,43 +1026,55 @@ class StackedBarChartViewportRenderObject extends RenderBox
     return measureFormatter?.call(measure) ?? measure.toStringAsFixed(2);
   }
 
-  static void _buildSections(final LayoutData layoutData, {
-    required final int stackIndex,
-    required final List<(int, BarChartSegment)> segments,
+  static void _buildBarGroups(final LayoutData layoutData, {
+    required final int groupIndex,
+    required final List<Bar> bars,
     required final Axis valueAxis,
     required final bool inverted,
     required final double dataRange,
     required final double mainAxisSize,
-    required final double mainZeroOffset,
+    required final double crossAxisOffset,
     required final double crossOffset,
     required final double barThickness,
-    required final ({ double start, double end}) barMargin,
+    required final double barSpacing,
+    required final ({ double start, double end}) groupMargin,
   })
   {
-    final stack = layoutData.stacks.putIfAbsent(stackIndex,
-      () => LayoutStack.empty(),
+    final group = layoutData.barGroups.putIfAbsent(groupIndex,
+      () => LayoutBarGroup.empty(),
     );
-    var mainOffset = mainZeroOffset;
-    segments.sort((a, b) => a.$1.compareTo(b.$1));
-    for (final (index, segment) in segments) {
-      final measure = segment.value;
-      final label = segment.label;
-      final sectionLength = measure.abs() / dataRange * mainAxisSize;
+    var offset = crossOffset;
+    for (var index = 0; index < bars.length; ++index) {
+      final bar = bars[index];
+      final isFirst = index == 0;
+      final isLast = index == bars.length - 1;
+      final startMargin = isFirst ? groupMargin.start : barSpacing / 2;
+      final endMargin = isLast ? groupMargin.end : barSpacing / 2;
+      final measure = bar.value;
+      final label = bar.label;
+      final invert = inverted ^ (measure < 0);
+      final barLength = measure.abs() / dataRange * mainAxisSize;
       final paint = Paint()
         ..style = PaintingStyle.fill
-        ..color = segment.color
+        ..color = bar.color
       ;
       switch (valueAxis) {
         case Axis.horizontal:
           final innerRect = Rect.fromLTWH(
-            inverted
-              ? mainAxisSize - mainOffset - sectionLength
-              : mainOffset,
-            crossOffset,
-            sectionLength,
+            invert ? crossAxisOffset - barLength : crossAxisOffset,
+            offset,
+            barLength,
             barThickness,
           );
-          stack.segments[index] = (innerRect, paint);
+          var layoutBar = LayoutBar(
+            rect: RRect.fromRectAndCorners(innerRect,
+              topRight: invert ? Radius.zero : bar.radius,
+              bottomRight: invert ? Radius.zero : bar.radius,
+              topLeft: invert ? bar.radius : Radius.zero,
+              bottomLeft: invert ? bar.radius : Radius.zero,
+            ),
+            paint: paint,
+          );
           if (label != null) {
             final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle())
               ..pushStyle(label.style.getTextStyle())
@@ -1120,7 +1087,7 @@ class StackedBarChartViewportRenderObject extends RenderBox
             switch (label.position) {
               case LabelPosition.inside:
                 if (lblSize <= innerRect.size) {
-                  stack.labels.add(LayoutLabel(
+                  layoutBar = layoutBar.withLabel(LayoutLabel(
                     offset: lblOffset.topLeft,
                     rect: lblOffset,
                     paragraph: paragraph,
@@ -1131,28 +1098,35 @@ class StackedBarChartViewportRenderObject extends RenderBox
                   inverted ? innerRect.left - lblSize.width : innerRect.right,
                   lblOffset.top,
                 );
-                stack.labels.add(LayoutLabel(
+                layoutBar = layoutBar.withLabel(LayoutLabel(
                   offset: offset,
                   rect: offset & lblSize,
                   paragraph: paragraph,
                 ));
             }
           }
+          group.bars[index] = layoutBar;
         case Axis.vertical:
           final innerRect = Rect.fromLTWH(
-            crossOffset,
-            inverted
-              ? mainOffset
-              : mainAxisSize - mainOffset - sectionLength,
+            offset,
+            invert ? crossAxisOffset : crossAxisOffset - barLength,
             barThickness,
-            sectionLength,
+            barLength,
           );
           final rectPadding = EdgeInsets.only(
-            left: barMargin.start,
-            right: barMargin.end,
+            left: startMargin,
+            right: endMargin,
           );
           final outerRect = rectPadding.inflateRect(innerRect);
-          stack.segments[index] = (innerRect, paint);
+          var layoutBar = LayoutBar(
+            rect: RRect.fromRectAndCorners(innerRect,
+              topLeft: invert ? Radius.zero : bar.radius,
+              topRight: invert ? Radius.zero : bar.radius,
+              bottomLeft: invert ? bar.radius : Radius.zero,
+              bottomRight: invert ? bar.radius : Radius.zero,
+            ),
+            paint: paint,
+          );
           if (label != null) {
             final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle())
               ..pushStyle(label.style.getTextStyle())
@@ -1170,7 +1144,7 @@ class StackedBarChartViewportRenderObject extends RenderBox
             switch (label.position) {
               case LabelPosition.inside:
                 if (lblSize <= innerRect.size) {
-                  stack.labels.add(LayoutLabel(
+                  layoutBar = layoutBar.withLabel(LayoutLabel(
                     offset: lblOffset.topLeft,
                     rect: lblOffset,
                     paragraph: paragraph,
@@ -1181,27 +1155,27 @@ class StackedBarChartViewportRenderObject extends RenderBox
                   lblOffset.left,
                   inverted ? outerRect.bottom : outerRect.top - lblSize.height,
                 );
-                stack.labels.add(LayoutLabel(
+                layoutBar = layoutBar.withLabel(LayoutLabel(
                   offset: offset,
                   rect: offset & lblSize,
                   paragraph: paragraph,
                 ));
             }
           }
+          group.bars[index] = layoutBar;
       }
-      mainOffset += sectionLength;
+      offset += barThickness + barSpacing;
     }
   }
 
   LayoutData? _layoutData;
-  Map<int, LayoutStack>? _stacks;
-  Map<int, LayoutStack>? _oldStacks;
+  Map<int, LayoutBarGroup>? _barGroups;
+  Map<int, LayoutBarGroup>? _oldBarGroups;
 
-  BarChartStacks _data;
+  ChartBars _data;
   ValueListenable<double>? _animation;
   TicksResolver _ticksResolver;
   MeasureFormatter? _measureFormatter;
-  bool _showZeroValues;
   TextStyle _mainAxisTextStyle;
   TextStyle _crossAxisTextStyle;
   Color _axisColor;
@@ -1217,6 +1191,7 @@ class StackedBarChartViewportRenderObject extends RenderBox
   double _barPadding;
   double _barSpacing;
   double? _barThickness;
+  double _groupSpacing;
   EdgeInsets _padding;
   Clip _clipBehavior;
   ViewportOffset _viewportOffset;
@@ -1234,6 +1209,7 @@ class LayoutMetrics
   final double upperPixels;
   final double dataRange;
   final List<ui.Paragraph> domainLabels;
+  // final List<BarsGroup> groups;
 
   const LayoutMetrics({
     required this.innerRect,
@@ -1245,13 +1221,15 @@ class LayoutMetrics
     required this.upperPixels,
     required this.dataRange,
     required this.domainLabels,
+    // required this.groups,
   });
 
   /// Calculates the bar thickness based on [crossAxisSize].
   double calcBarThickness({
     required final double barPadding,
     required final double barSpacing,
-    required final int stacksNumber,
+    required final double groupSpacing,
+    required final List<BarsGroup> groups,
   })
   {
     return max(
@@ -1260,8 +1238,9 @@ class LayoutMetrics
         crossAxisSize
         - mainAxisField
         - barPadding * 2
-        - (barSpacing * max(stacksNumber - 1, 0))
-      ) / stacksNumber,
+        - groups.fold(0.0, (s, g) => s + barSpacing * max(g.bars.length - 1, 0))
+        - (groupSpacing * (groups.length - 1))
+      ) / groups.fold(0, (s, g) => s + g.bars.length),
     );
   }
 
@@ -1270,22 +1249,27 @@ class LayoutMetrics
     required final double barPadding,
     required final double barSpacing,
     required final double barThickness,
-    required final int stacksNumber,
+    required final double groupSpacing,
+    required final List<BarsGroup> groups,
   }) => mainAxisField + calcScrollAreaSize(
     barPadding: barPadding,
     barSpacing: barSpacing,
     barThickness: barThickness,
-    stacksNumber: stacksNumber,
+    groupSpacing: groupSpacing,
+    groups: groups,
   );
 
   static double calcScrollAreaSize({
     required final double barPadding,
     required final double barSpacing,
     required final double barThickness,
-    required final int stacksNumber,
+    required final double groupSpacing,
+    required final List<BarsGroup> groups,
   }) => barPadding * 2
-      + barSpacing * max(stacksNumber - 1, 0)
-      + barThickness * stacksNumber;
+      + groups.fold(0.0, (s, g) => s + barSpacing * max(g.bars.length - 1, 0))
+      + (groupSpacing * (groups.length - 1))
+      + barThickness * groups.fold(0, (s, g) => s + g.bars.length);
+
 }
 
 
@@ -1298,7 +1282,7 @@ class LayoutData
   final List<(Offset, Offset)> guideLines;
   final List<(Offset, ui.Paragraph)> mainLabels;
   final List<LayoutLabel> crossLabels;
-  final Map<int, LayoutStack> stacks;
+  final Map<int, LayoutBarGroup> barGroups;
 
   const LayoutData({
     required this.clipRect,
@@ -1308,7 +1292,7 @@ class LayoutData
     required this.guideLines,
     required this.mainLabels,
     required this.crossLabels,
-    required this.stacks,
+    required this.barGroups,
   });
 
   factory LayoutData.empty(final Rect clipRect) => LayoutData(
@@ -1319,19 +1303,18 @@ class LayoutData
     guideLines: [],
     mainLabels: [],
     crossLabels: [],
-    stacks: {},
+    barGroups: {},
   );
 
   LayoutData copyWith({
     final Rect? clipRect,
     final Rect? scrollAreaClipRect,
-    final LayoutMetrics? layoutMetrics,
     final double? crossAxisOffset,
     final List<(Offset, Offset)>? axisLines,
     final List<(Offset, Offset)>? guideLines,
     final List<(Offset, ui.Paragraph)>? mainLabels,
     final List<LayoutLabel>? crossLabels,
-    final Map<int, LayoutStack>? stacks,
+    final Map<int, LayoutBarGroup>? barGroups,
   }) => LayoutData(
     clipRect: clipRect ?? this.clipRect,
     scrollAreaClipRect: scrollAreaClipRect ?? this.scrollAreaClipRect,
@@ -1340,48 +1323,40 @@ class LayoutData
     guideLines: guideLines ?? this.guideLines,
     mainLabels: mainLabels ?? this.mainLabels,
     crossLabels: crossLabels ?? this.crossLabels,
-    stacks: stacks ?? this.stacks,
+    barGroups: barGroups ?? this.barGroups,
   );
 }
 
 
-class LayoutStack
+class LayoutBarGroup
 {
-  final Map<int, (Rect, Paint)> segments;
-  final List<LayoutLabel> labels;
-  final RRect clipRRect;
+  final Map<int, LayoutBar> bars;
 
-  const LayoutStack({
-    required this.segments,
-    required this.labels,
-    required this.clipRRect,
+  const LayoutBarGroup({
+    required this.bars,
   });
 
-  factory LayoutStack.empty() => LayoutStack(
-    segments: SplayTreeMap(),
-    labels: [],
-    clipRRect: RRect.zero,
+  factory LayoutBarGroup.empty() => LayoutBarGroup(
+    bars: SplayTreeMap(),
   );
+}
 
-  LayoutStack withBorderRadius(final BorderRadius radius)
-  {
-    if (segments.isEmpty) return this;
-    Rect? clipRect;
-    for (final segment in segments.values) {
-      final (rect, _) = segment;
-      if (clipRect == null) {
-        clipRect = rect;
-      } else {
-        clipRect = clipRect.expandToInclude(rect);
-      }
-    }
-    assert(clipRect != null);
-    return LayoutStack(
-      segments: segments,
-      labels: labels,
-      clipRRect: radius.toRRect(clipRect!),
-    );
-  }
+
+class LayoutBar
+{
+  final RRect rect;
+  final Paint paint;
+  final LayoutLabel? label;
+
+  const LayoutBar({
+    required this.rect,
+    required this.paint,
+    this.label,
+  });
+
+  LayoutBar withLabel(final LayoutLabel label) => LayoutBar(
+    rect: rect, paint: paint, label: label,
+  );
 }
 
 

@@ -18,6 +18,8 @@ typedef Data<D, T> = List<Series<D, T>>;
 
 class _BarSinglePageState extends State<BarSinglePage>
 {
+  final number = NumberFormat.compact(locale: 'en');
+
   static final random = Random();
 
   static int generateRndInt({
@@ -37,7 +39,9 @@ class _BarSinglePageState extends State<BarSinglePage>
     }
   }
 
-  static const domains = [ 'alpha', 'beta', 'gamma', 'delta', 'epsilon' ];
+  static const domains = [
+    'alpha', 'beta', 'gamma', 'delta',
+  ];
   static const colors1 = [
     Color(0xFFF48FB1),
     Color(0xFF69F0AE),
@@ -111,25 +115,65 @@ class _BarSinglePageState extends State<BarSinglePage>
 
   Widget get card
   {
-    final number = NumberFormat.compact(locale: 'ru');
-    return Card(
-      child: SizedBox(
-        height: 450,
-        child: BarChart(
-          data: _data,
-          measureFormatter: number.format,
-          valueAxis: Axis.horizontal,
-          inverted: true,
-          minTickSpacing: 40,
-          barPadding: 10,
-          groupSpacing: 30,
-          padding: const EdgeInsets.all(16.0),
-          radius: const Radius.circular(16),
-          animationDuration: const Duration(milliseconds: 350),
+    return Column(
+      spacing: 20,
+      children: [
+        Flexible(
+          child: Card(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 400),
+              child: BarChart(
+                data: _data,
+                measureFormatter: number.format,
+                valueAxis: _valueAxis,
+                inverted: _inverted,
+                minTickSpacing: 40,
+                barPadding: 10,
+                barThickness: _autoFit ? null : 30,
+                groupSpacing: 20,
+                padding: const EdgeInsets.all(16.0),
+                radius: const Radius.circular(16),
+                animationDuration: const Duration(milliseconds: 350),
+              ),
+            ),
+          ),
         ),
-      ),
+        SegmentedButton(
+          segments: const [
+            ButtonSegment(
+              value: Axis.vertical,
+              label: Text('Vertical'),
+            ),
+            ButtonSegment(
+              value: Axis.horizontal,
+              label: Text('Horizontal'),
+            ),
+          ],
+          selected: { _valueAxis },
+          onSelectionChanged: (values) => setState(() => _valueAxis = values.first),
+        ),
+        SwitchListTile(
+          title: const Text('Autofit'),
+          subtitle: const Text(
+            'Autosize stacks width so that all of them fit into the widget.'
+          ),
+          value: _autoFit,
+          onChanged: (value) => setState(() => _autoFit = value == true),
+        ),
+        SwitchListTile(
+          title: const Text('Inverted'),
+          subtitle: const Text(
+            'Invert bar direction.'
+          ),
+          value: _inverted,
+          onChanged: (value) => setState(() => _inverted = value == true),
+        ),
+      ],
     );
   }
 
   late Data<String, int> _data;
+  var _autoFit = false;
+  var _inverted = false;
+  var _valueAxis = Axis.vertical;
 }

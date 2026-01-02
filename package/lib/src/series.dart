@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
 import 'chart_label.dart';
@@ -60,6 +61,38 @@ class Series<D, T>
       : labelAccessor.value,
   );
 }
+
+
+bool seriesAreDifferent<D, T>(
+  final List<Series<D, T>> data1,
+  final List<Series<D, T>> data2,
+)
+{
+  if (data1.length != data2.length) return true;
+  for (var i = 0; i < data1.length; ++i) {
+    if (!mapEquals(data1[i].data, data2[i].data)) return true;
+  }
+  return false;
+}
+
+
+bool seriesAreCompatible<D, T>(
+  final List<Series<D, T>> data1,
+  final List<Series<D, T>> data2,
+)
+{
+  final s1 = data1.map((e) => e.data.keys.toList()).expand((e) => e).toSet();
+  final s2 = data2.map((e) => e.data.keys.toList()).expand((e) => e).toSet();
+  return setEquals(s1, s2);
+}
+
+
+/// A SeriesComparator is used to compare chart data to decide whether to apply
+/// animation between the current and the new datasets.
+typedef SeriesComparator<D, T> = bool Function(
+  List<Series<D, T>> data1,
+  List<Series<D, T>> data2,
+);
 
 /// Defines a [double] representation of a value of type [T].
 typedef MeasureAccessor<T> = double Function(T value);

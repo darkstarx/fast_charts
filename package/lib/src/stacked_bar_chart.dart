@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'bar_chart/ticks_resolver.dart';
@@ -156,6 +155,24 @@ class StackedBarChart<D, T> extends StatefulWidget
   /// The curve of the change animation.
   final Curve animationCurve;
 
+  /// A series comparator to decide is the new [data] is compatible with the old
+  /// one.
+  ///
+  /// When the new [data] is compatible with the old one and differs from it,
+  /// the animation will be applied to show the change smoothly.
+  ///
+  /// Defaults to [seriesAreCompatible].
+  final SeriesComparator<D, T>? seriesCompatibility;
+
+  /// A series comparator to decide is the new [data] differs from the old
+  /// one.
+  ///
+  /// When the new [data] is compatible with the old one and differs from it,
+  /// the animation will be applied to show the change smoothly.
+  ///
+  /// /// Defaults to [seriesAreDifferent].
+  final SeriesComparator<D, T>? seriesDifference;
+
   const StackedBarChart({
     super.key,
     required this.data,
@@ -188,6 +205,9 @@ class StackedBarChart<D, T> extends StatefulWidget
     this.radius = Radius.zero,
     this.animationDuration = Duration.zero,
     this.animationCurve = Curves.easeOut,
+
+    this.seriesCompatibility,
+    this.seriesDifference,
   });
 
   @override
@@ -250,13 +270,17 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
       );
       if (widget.animationDuration > Duration.zero
         && widget.data != oldWidget.data
-        && _dataIsCompatible(widget.data, oldWidget.data)
-        && _dataIsDifferent(widget.data, oldWidget.data)
       ) {
-        _controller.forward(from: 0.0);
-        _currentAnimation = _controller.drive(
-          CurveTween(curve: widget.animationCurve),
-        );
+        final isDataCompatible = widget.seriesCompatibility ?? seriesAreCompatible;
+        final isDataDifferent = widget.seriesDifference ?? seriesAreDifferent;
+        if (isDataCompatible(widget.data, oldWidget.data)
+          && isDataDifferent(widget.data, oldWidget.data)
+        ) {
+          _controller.forward(from: 0.0);
+          _currentAnimation = _controller.drive(
+            CurveTween(curve: widget.animationCurve),
+          );
+        }
       }
     }
     super.didUpdateWidget(oldWidget);
@@ -304,28 +328,6 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
         Axis.vertical => AxisDirection.right,
       },
     );
-  }
-
-  bool _dataIsDifferent(
-    final List<Series<D, T>> data1,
-    final List<Series<D, T>> data2,
-  )
-  {
-    if (data1.length != data2.length) return true;
-    for (var i = 0; i < data1.length; ++i) {
-      if (!mapEquals(data1[i].data, data2[i].data)) return true;
-    }
-    return false;
-  }
-
-  bool _dataIsCompatible(
-    final List<Series<D, T>> set1,
-    final List<Series<D, T>> set2,
-  )
-  {
-    final d1 = set1.map((e) => e.data.keys.toList()).expand((e) => e).toSet();
-    final d2 = set2.map((e) => e.data.keys.toList()).expand((e) => e).toSet();
-    return setEquals(d1, d2);
   }
 
   void _onAnimationDone()

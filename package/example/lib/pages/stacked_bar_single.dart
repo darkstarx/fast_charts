@@ -73,7 +73,8 @@ class _StackedBarSinglePageState extends State<StackedBarSinglePage>
     colorAccessor: (d, v) => colors2[r.$1],
     measureAccessor: getMeasure,
     labelAccessor: (domain, value, percent) => getLabel(value, colors2[r.$1]),
-  )).toList();
+  ))
+  .toList();
 
   static double getMeasure(final int value) => value.toDouble();
 
@@ -104,7 +105,7 @@ class _StackedBarSinglePageState extends State<StackedBarSinglePage>
   {
     return Scaffold(
       appBar: AppBar(title: const Text('Single stacked bar chart')),
-      body: Center(child: card),
+      body: card,
       floatingActionButton: FloatingActionButton(
         onPressed: () => setState(() {
           _data = _data == data1 ? data2 : data1;
@@ -122,16 +123,16 @@ class _StackedBarSinglePageState extends State<StackedBarSinglePage>
         Flexible(
           child: Card(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 300),
+              constraints: const BoxConstraints(maxHeight: 400),
               child: StackedBarChart(
                 data: _data,
                 measureFormatter: number.format,
-                valueAxis: Axis.vertical,
-                inverted: false,
+                valueAxis: _valueAxis,
+                inverted: _inverted,
                 minTickSpacing: 40,
                 barPadding: 10,
                 barSpacing: 10,
-                barThickness: _autoSize ? null : 60,
+                barThickness: _autoFit ? null : 60,
                 padding: const EdgeInsets.all(16.0),
                 radius: const Radius.circular(16),
                 animationDuration: const Duration(milliseconds: 350),
@@ -139,18 +140,42 @@ class _StackedBarSinglePageState extends State<StackedBarSinglePage>
             ),
           ),
         ),
-        CheckboxListTile(
+        SegmentedButton(
+          segments: const [
+            ButtonSegment(
+              value: Axis.vertical,
+              label: Text('Vertical'),
+            ),
+            ButtonSegment(
+              value: Axis.horizontal,
+              label: Text('Horizontal'),
+            ),
+          ],
+          selected: { _valueAxis },
+          onSelectionChanged: (values) => setState(() => _valueAxis = values.first),
+        ),
+        SwitchListTile(
           title: const Text('Autofit'),
           subtitle: const Text(
             'Autosize stacks width so that all of them fit into the widget.'
           ),
-          value: _autoSize,
-          onChanged: (value) => setState(() => _autoSize = value == true),
+          value: _autoFit,
+          onChanged: (value) => setState(() => _autoFit = value == true),
+        ),
+        SwitchListTile(
+          title: const Text('Inverted'),
+          subtitle: const Text(
+            'Invert bar direction.'
+          ),
+          value: _inverted,
+          onChanged: (value) => setState(() => _inverted = value == true),
         ),
       ],
     );
   }
 
   late Data<String, int> _data;
-  var _autoSize = false;
+  var _autoFit = false;
+  var _inverted = false;
+  var _valueAxis = Axis.vertical;
 }

@@ -1,9 +1,8 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'bar_chart/bar_data.dart';
-import 'bar_chart/painter.dart';
 import 'bar_chart/ticks_resolver.dart';
+import 'bar_chart/viewport.dart';
 import 'series.dart';
 import 'types.dart';
 import 'utils.dart';
@@ -24,7 +23,7 @@ class BarChart<D, T> extends StatefulWidget
 
   /// Converts measure value of type [double] to [String] type to be shown on
   /// the measure axis.
-  /// 
+  ///
   /// NOTE: Make sure that this function is not recreated on rebuilding your
   /// widget, otherwise it will lead to unnecessary redrawing of the diagram.
   final MeasureFormatter? measureFormatter;
@@ -128,6 +127,12 @@ class BarChart<D, T> extends StatefulWidget
   /// It's zero by default.
   final double barPadding;
 
+  /// The thickness of each bar.
+  ///
+  /// If not specified, the thickness is calculated from the size of the chart
+  /// area.
+  final double? barThickness;
+
   /// The padding of the diagram.
   ///
   /// It's zero by default.
@@ -151,6 +156,24 @@ class BarChart<D, T> extends StatefulWidget
 
   /// The curve of the change animation.
   final Curve animationCurve;
+
+  /// A series comparator to decide is the new [data] is compatible with the old
+  /// one.
+  ///
+  /// When the new [data] is compatible with the old one and differs from it,
+  /// the animation will be applied to show the change smoothly.
+  ///
+  /// Defaults to [seriesAreCompatible].
+  final SeriesComparator<D, T>? seriesCompatibility;
+
+  /// A series comparator to decide is the new [data] differs from the old
+  /// one.
+  ///
+  /// When the new [data] is compatible with the old one and differs from it,
+  /// the animation will be applied to show the change smoothly.
+  ///
+  /// /// Defaults to [seriesAreDifferent].
+  final SeriesComparator<D, T>? seriesDifference;
 
   const BarChart({
     super.key,
@@ -178,12 +201,16 @@ class BarChart<D, T> extends StatefulWidget
     this.groupSpacing = 0.0,
     this.barSpacing = 0.0,
     this.barPadding = 0.0,
+    this.barThickness,
 
     this.padding = EdgeInsets.zero,
     this.clipBehavior = Clip.hardEdge,
     this.radius = Radius.zero,
     this.animationDuration = Duration.zero,
     this.animationCurve = Curves.easeOut,
+
+    this.seriesCompatibility,
+    this.seriesDifference,
   });
 
   @override
@@ -247,15 +274,20 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
         inverted: widget.inverted,
         radius: widget.radius,
       );
+
       if (widget.animationDuration > Duration.zero
         && widget.data != oldWidget.data
-        && _dataIsCompatible(widget.data, oldWidget.data)
-        && _dataIsDifferent(widget.data, oldWidget.data)
       ) {
-        _controller.forward(from: 0.0);
-        _currentAnimation = _controller.drive(
-          CurveTween(curve: widget.animationCurve),
-        );
+        final isDataCompatible = widget.seriesCompatibility ?? seriesAreCompatible;
+        final isDataDifferent = widget.seriesDifference ?? seriesAreDifferent;
+        if (isDataCompatible(widget.data, oldWidget.data)
+          && isDataDifferent(widget.data, oldWidget.data)
+        ) {
+          _controller.forward(from: 0.0);
+          _currentAnimation = _controller.drive(
+            CurveTween(curve: widget.animationCurve),
+          );
+        }
       }
     }
     super.didUpdateWidget(oldWidget);
@@ -264,26 +296,25 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
   @override
   Widget build(final BuildContext context)
   {
-    final theme = Theme.of(context);
-    return LayoutBuilder(builder: (context, constraints) => CustomPaint(
-      size: constraints.biggest,
-      painter: BarPainter(
+    final colorScheme = ColorScheme.of(context);
+    return Scrollable(
+      viewportBuilder: (context, offset) => GroupedBarChartViewport(
         data: _groups,
         animation: _currentAnimation,
         ticksResolver: _ticksResolver,
         measureFormatter: widget.measureFormatter,
         mainAxisTextStyle: widget.mainAxisTextStyle ?? TextStyle(
           fontSize: 12.0,
-          color: theme.colorScheme.onSurface,
+          color: colorScheme.onSurface,
         ),
         crossAxisTextStyle: widget.crossAxisTextStyle ?? TextStyle(
           fontSize: 12.0,
-          color: theme.colorScheme.onSurface,
+          color: colorScheme.onSurface,
         ),
-        axisColor: widget.axisColor ?? theme.colorScheme.onSurface,
+        axisColor: widget.axisColor ?? colorScheme.onSurface,
         axisThickness: widget.axisThickness,
         guideLinesColor: widget.guideLinesColor
-          ?? theme.colorScheme.onSurface.withValues(alpha: 0.1),
+          ?? colorScheme.onSurface.withValues(alpha: 0.1),
         guideLinesThickness: widget.guideLinesThickness,
         mainAxisLabelsOffset: widget.mainAxisLabelsOffset,
         crossAxisLabelsOffset: widget.crossAxisLabelsOffset,
@@ -293,33 +324,17 @@ class _BarChartState<D, T> extends State<BarChart<D, T>>
         showCrossAxisLine: widget.showCrossAxisLine,
         barPadding: widget.barPadding,
         barSpacing: widget.barSpacing,
+        barThickness: widget.barThickness,
         groupSpacing: widget.groupSpacing,
         padding: widget.padding,
         clipBehavior: widget.clipBehavior,
+        viewportOffset: offset,
       ),
-    ));
-  }
-
-  bool _dataIsDifferent(
-    final List<Series<D, T>> data1,
-    final List<Series<D, T>> data2,
-  )
-  {
-    if (data1.length != data2.length) return true;
-    for (var i = 0; i < data1.length; ++i) {
-      if (!mapEquals(data1[i].data, data2[i].data)) return true;
-    }
-    return false;
-  }
-
-  bool _dataIsCompatible(
-    final List<Series<D, T>> data1,
-    final List<Series<D, T>> data2,
-  )
-  {
-    final d1 = data1.map((e) => e.data.keys.toList()).expand((e) => e).toSet();
-    final d2 = data2.map((e) => e.data.keys.toList()).expand((e) => e).toSet();
-    return setEquals(d1, d2);
+      axisDirection: switch (widget.valueAxis) {
+        Axis.horizontal => AxisDirection.down,
+        Axis.vertical => AxisDirection.right,
+      },
+    );
   }
 
   void _onAnimationDone()
