@@ -1,3 +1,9 @@
+## 0.3.0
+
+* Support for optional scrolling in bar charts by setting `barThickness`.
+* Support for custom series comparator in bar charts to make the animation logic posssible to change.
+* Updated the example.
+
 ## 0.2.2
 
 * Get rid of deprecated code.

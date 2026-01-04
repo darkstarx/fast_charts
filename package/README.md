@@ -19,6 +19,7 @@ This is a set of widgets to render different customizable charts quickly. You ca
 </table>
 
 - Horizontal and vertical orientations of bar charts.
+- Autofit or scrolling bar charts.
 - Inverting the main scale of bar charts.
 - Animation of changes in compatible data series.
 <table>
