@@ -3,6 +3,8 @@ description: A package of high-performance customizable charts, including horizo
 version: 0.3.3
 repository: https://github.com/darkstarx/fast_charts
 
+publish_to: https://pub.rightbrain.pro
+
 environment:
   sdk: '>=3.0.0 <4.0.0'
   flutter: ">=1.17.0"
@@ -10,6 +12,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  optional:
+    hosted: https://pub.rightbrain.pro
+    version: ^1.0.0
 
 dev_dependencies:
   flutter_test:
