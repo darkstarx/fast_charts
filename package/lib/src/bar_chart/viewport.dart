@@ -18,6 +18,7 @@ class GroupedBarChartViewport extends LeafRenderObjectWidget
   final ValueListenable<double>? animation;
   final TicksResolver ticksResolver;
   final MeasureFormatter? measureFormatter;
+  final double labelsOffset;
   final TextStyle mainAxisTextStyle;
   final TextStyle crossAxisTextStyle;
   final Color axisColor;
@@ -44,6 +45,7 @@ class GroupedBarChartViewport extends LeafRenderObjectWidget
     this.animation,
     required this.ticksResolver,
     this.measureFormatter,
+    this.labelsOffset = 2.0,
     required this.mainAxisTextStyle,
     required this.crossAxisTextStyle,
     required this.axisColor,
@@ -73,6 +75,7 @@ class GroupedBarChartViewport extends LeafRenderObjectWidget
       animation: animation,
       ticksResolver: ticksResolver,
       measureFormatter: measureFormatter,
+      labelsOffset: labelsOffset,
       mainAxisTextStyle: mainAxisTextStyle,
       crossAxisTextStyle: crossAxisTextStyle,
       axisColor: axisColor,
@@ -105,6 +108,7 @@ class GroupedBarChartViewport extends LeafRenderObjectWidget
       ..animation = animation
       ..ticksResolver = ticksResolver
       ..measureFormatter = measureFormatter
+      ..labelsOffset = labelsOffset
       ..mainAxisTextStyle = mainAxisTextStyle
       ..crossAxisTextStyle = crossAxisTextStyle
       ..axisColor = axisColor
@@ -166,6 +170,14 @@ class GroupedBarChartViewportRenderObject extends RenderBox
   {
     if (_measureFormatter == value) return;
     _measureFormatter = value;
+    markNeedsRebuild();
+  }
+
+  double get labelsOffset => _labelsOffset;
+  set labelsOffset(final double value)
+  {
+    if (_labelsOffset == value) return;
+    _labelsOffset = value;
     markNeedsRebuild();
   }
 
@@ -335,6 +347,7 @@ class GroupedBarChartViewportRenderObject extends RenderBox
     final ValueListenable<double>? animation,
     required final TicksResolver ticksResolver,
     final MeasureFormatter? measureFormatter,
+    final double labelsOffset = 2.0,
     required final TextStyle mainAxisTextStyle,
     required final TextStyle crossAxisTextStyle,
     required final Color axisColor,
@@ -359,6 +372,7 @@ class GroupedBarChartViewportRenderObject extends RenderBox
   , _animation = animation
   , _ticksResolver = ticksResolver
   , _measureFormatter = measureFormatter
+  , _labelsOffset = labelsOffset
   , _mainAxisTextStyle = mainAxisTextStyle
   , _crossAxisTextStyle = crossAxisTextStyle
   , _axisColor = axisColor
@@ -762,7 +776,8 @@ class GroupedBarChartViewportRenderObject extends RenderBox
 
   LayoutData _buildLayout()
   {
-    final layoutData = LayoutData.empty(Offset.zero & size);
+    final outerRect = Offset.zero & size;
+    final layoutData = LayoutData.empty(outerRect);
     final layoutMetrics = calcLayoutMetrics(size, layoutData: layoutData);
 
     final innerRect = layoutMetrics.innerRect;
@@ -794,8 +809,8 @@ class GroupedBarChartViewportRenderObject extends RenderBox
         crossAxisOffset = data.inverted
           ? lowerMainZeroOffset
           : upperMainZeroOffset;
-        scrollAreaClipRect = innerRect.topLeft
-          & Size(innerRect.width, innerRect.height - mainAxisField);
+        scrollAreaClipRect = Offset(outerRect.left, innerRect.top)
+          & Size(outerRect.width, innerRect.height - mainAxisField);
         crossOffset = innerRect.top + barPadding;
       case Axis.vertical:
         upperMainZeroOffset = data.inverted
@@ -807,8 +822,8 @@ class GroupedBarChartViewportRenderObject extends RenderBox
         crossAxisOffset = data.inverted
           ? upperMainZeroOffset
           : lowerMainZeroOffset;
-        scrollAreaClipRect = Offset(innerRect.left + mainAxisField, innerRect.top)
-          & Size(innerRect.width - mainAxisField, innerRect.height);
+        scrollAreaClipRect = Offset(innerRect.left + mainAxisField, outerRect.top)
+          & Size(innerRect.width - mainAxisField, outerRect.height);
         crossOffset = innerRect.left + mainAxisField + barPadding;
     }
     for (var i = 0; i < data.groups.length; ++i) {
@@ -833,6 +848,7 @@ class GroupedBarChartViewportRenderObject extends RenderBox
         barThickness: barThickness,
         barSpacing: barSpacing,
         groupMargin: groupMargin,
+        labelsOffset: labelsOffset,
       );
 
       final labelSize = Size(domainLabel.width, domainLabel.height);
@@ -1038,6 +1054,7 @@ class GroupedBarChartViewportRenderObject extends RenderBox
     required final double barThickness,
     required final double barSpacing,
     required final ({ double start, double end}) groupMargin,
+    required final double labelsOffset,
   })
   {
     final group = layoutData.barGroups.putIfAbsent(groupIndex,
@@ -1095,7 +1112,9 @@ class GroupedBarChartViewportRenderObject extends RenderBox
                 }
               case LabelPosition.outside:
                 final offset = Offset(
-                  inverted ? innerRect.left - lblSize.width : innerRect.right,
+                  inverted
+                    ? innerRect.left - lblSize.width - labelsOffset
+                    : innerRect.right + labelsOffset,
                   lblOffset.top,
                 );
                 layoutBar = layoutBar.withLabel(LayoutLabel(
@@ -1153,7 +1172,9 @@ class GroupedBarChartViewportRenderObject extends RenderBox
               case LabelPosition.outside:
                 final offset = Offset(
                   lblOffset.left,
-                  inverted ? outerRect.bottom : outerRect.top - lblSize.height,
+                  inverted
+                    ? outerRect.bottom + labelsOffset
+                    : outerRect.top - lblSize.height - labelsOffset,
                 );
                 layoutBar = layoutBar.withLabel(LayoutLabel(
                   offset: offset,
@@ -1176,6 +1197,7 @@ class GroupedBarChartViewportRenderObject extends RenderBox
   ValueListenable<double>? _animation;
   TicksResolver _ticksResolver;
   MeasureFormatter? _measureFormatter;
+  double _labelsOffset;
   TextStyle _mainAxisTextStyle;
   TextStyle _crossAxisTextStyle;
   Color _axisColor;

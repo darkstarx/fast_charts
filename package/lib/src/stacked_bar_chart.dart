@@ -36,6 +36,9 @@ class StackedBarChart<D, T> extends StatefulWidget
   /// vertically, otherwise - horizontally.
   final Axis valueAxis;
 
+  /// The offset of outside labels from the edge of the bar.
+  final double labelsOffset;
+
   /// Whether to show zero segments of bar.
   ///
   /// When the measure value is zero, the diagram doesn't show corresponding
@@ -179,6 +182,7 @@ class StackedBarChart<D, T> extends StatefulWidget
     this.domainFormatter,
     this.measureFormatter,
     this.valueAxis = Axis.vertical,
+    this.labelsOffset = 2.0,
     this.showZeroValues = false,
     this.inverted = false,
 
@@ -296,6 +300,7 @@ class _StackedBarChartState<D, T> extends State<StackedBarChart<D, T>>
         animation: _currentAnimation,
         ticksResolver: _ticksResolver,
         measureFormatter: widget.measureFormatter,
+        labelsOffset: widget.labelsOffset,
         showZeroValues: widget.showZeroValues,
         mainAxisTextStyle: widget.mainAxisTextStyle ?? TextStyle(
           fontSize: 12.0,

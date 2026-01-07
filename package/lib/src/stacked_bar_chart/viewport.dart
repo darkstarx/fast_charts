@@ -18,6 +18,7 @@ class StackedBarChartViewport extends LeafRenderObjectWidget
   final ValueListenable<double>? animation;
   final TicksResolver ticksResolver;
   final MeasureFormatter? measureFormatter;
+  final double labelsOffset;
   final bool showZeroValues;
   final TextStyle mainAxisTextStyle;
   final TextStyle crossAxisTextStyle;
@@ -44,6 +45,7 @@ class StackedBarChartViewport extends LeafRenderObjectWidget
     this.animation,
     required this.ticksResolver,
     this.measureFormatter,
+    this.labelsOffset = 2.0,
     this.showZeroValues = false,
     required this.mainAxisTextStyle,
     required this.crossAxisTextStyle,
@@ -73,6 +75,7 @@ class StackedBarChartViewport extends LeafRenderObjectWidget
       animation: animation,
       ticksResolver: ticksResolver,
       measureFormatter: measureFormatter,
+      labelsOffset: labelsOffset,
       showZeroValues: showZeroValues,
       mainAxisTextStyle: mainAxisTextStyle,
       crossAxisTextStyle: crossAxisTextStyle,
@@ -105,6 +108,7 @@ class StackedBarChartViewport extends LeafRenderObjectWidget
       ..animation = animation
       ..ticksResolver = ticksResolver
       ..measureFormatter = measureFormatter
+      ..labelsOffset = labelsOffset
       ..showZeroValues = showZeroValues
       ..mainAxisTextStyle = mainAxisTextStyle
       ..crossAxisTextStyle = crossAxisTextStyle
@@ -166,6 +170,14 @@ class StackedBarChartViewportRenderObject extends RenderBox
   {
     if (_measureFormatter == value) return;
     _measureFormatter = value;
+    markNeedsRebuild();
+  }
+
+  double get labelsOffset => _labelsOffset;
+  set labelsOffset(final double value)
+  {
+    if (_labelsOffset == value) return;
+    _labelsOffset = value;
     markNeedsRebuild();
   }
 
@@ -332,34 +344,36 @@ class StackedBarChartViewportRenderObject extends RenderBox
   bool get isRepaintBoundary => true;
 
   StackedBarChartViewportRenderObject({
-    required BarChartStacks data,
-    ValueListenable<double>? animation,
-    required TicksResolver ticksResolver,
-    MeasureFormatter? measureFormatter,
-    bool showZeroValues = false,
-    required TextStyle mainAxisTextStyle,
-    required TextStyle crossAxisTextStyle,
-    required Color axisColor,
-    double axisThickness = 1.0,
-    required Color guideLinesColor,
-    double guideLinesThickness = 1.0,
-    double mainAxisLabelsOffset = 2.0,
-    double crossAxisLabelsOffset = 2.0,
-    double? mainAxisWidth,
-    double? crossAxisWidth,
-    bool showMainAxisLine = false,
-    bool showCrossAxisLine = true,
-    double barPadding = 0.0,
-    double barSpacing = 0.0,
-    double? barThickness,
-    EdgeInsets padding = EdgeInsets.zero,
-    Clip clipBehavior = Clip.hardEdge,
-    required ViewportOffset viewportOffset,
+    required final BarChartStacks data,
+    final ValueListenable<double>? animation,
+    required final TicksResolver ticksResolver,
+    final MeasureFormatter? measureFormatter,
+    final double labelsOffset = 2.0,
+    final bool showZeroValues = false,
+    required final TextStyle mainAxisTextStyle,
+    required final TextStyle crossAxisTextStyle,
+    required final Color axisColor,
+    final double axisThickness = 1.0,
+    required final Color guideLinesColor,
+    final double guideLinesThickness = 1.0,
+    final double mainAxisLabelsOffset = 2.0,
+    final double crossAxisLabelsOffset = 2.0,
+    final double? mainAxisWidth,
+    final double? crossAxisWidth,
+    final bool showMainAxisLine = false,
+    final bool showCrossAxisLine = true,
+    final double barPadding = 0.0,
+    final double barSpacing = 0.0,
+    final double? barThickness,
+    final EdgeInsets padding = EdgeInsets.zero,
+    final Clip clipBehavior = Clip.hardEdge,
+    required final ViewportOffset viewportOffset,
   })
   : _data = data
   , _animation = animation
   , _ticksResolver = ticksResolver
   , _measureFormatter = measureFormatter
+  , _labelsOffset = labelsOffset
   , _showZeroValues = showZeroValues
   , _mainAxisTextStyle = mainAxisTextStyle
   , _crossAxisTextStyle = crossAxisTextStyle
@@ -745,7 +759,8 @@ class StackedBarChartViewportRenderObject extends RenderBox
 
   LayoutData _buildLayout()
   {
-    final layoutData = LayoutData.empty(Offset.zero & size);
+    final outerRect = Offset.zero & size;
+    final layoutData = LayoutData.empty(outerRect);
     final layoutMetrics = calcLayoutMetrics(size, layoutData: layoutData);
 
     final innerRect = layoutMetrics.innerRect;
@@ -776,8 +791,8 @@ class StackedBarChartViewportRenderObject extends RenderBox
         zeroOnMainAxis = data.inverted
           ? lowerMainZeroOffset
           : upperMainZeroOffset;
-        scrollAreaClipRect = innerRect.topLeft
-          & Size(innerRect.width, innerRect.height - mainAxisField);
+        scrollAreaClipRect = Offset(outerRect.left, innerRect.top)
+          & Size(outerRect.width, innerRect.height - mainAxisField);
         crossOffset = innerRect.top + barPadding;
       case Axis.vertical:
         upperMainZeroOffset = data.inverted
@@ -789,8 +804,8 @@ class StackedBarChartViewportRenderObject extends RenderBox
         zeroOnMainAxis = data.inverted
           ? upperMainZeroOffset
           : lowerMainZeroOffset;
-        scrollAreaClipRect = Offset(innerRect.left + mainAxisField, innerRect.top)
-          & Size(innerRect.width - mainAxisField, innerRect.height);
+        scrollAreaClipRect = Offset(innerRect.left + mainAxisField, outerRect.top)
+          & Size(innerRect.width - mainAxisField, outerRect.height);
         crossOffset = innerRect.left + mainAxisField + barPadding;
     }
     for (var i = 0; i < data.stacks.length; ++i) {
@@ -840,6 +855,7 @@ class StackedBarChartViewportRenderObject extends RenderBox
         crossOffset: crossOffset,
         barThickness: barThickness,
         barMargin: barMargin,
+        labelsOffset: labelsOffset,
       );
       _buildSections(layoutData,
         stackIndex: i,
@@ -852,6 +868,7 @@ class StackedBarChartViewportRenderObject extends RenderBox
         crossOffset: crossOffset,
         barThickness: barThickness,
         barMargin: barMargin,
+        labelsOffset: labelsOffset,
       );
       final layoutStack = layoutData.stacks[i];
       if (layoutStack != null) {
@@ -1082,6 +1099,7 @@ class StackedBarChartViewportRenderObject extends RenderBox
     required final double crossOffset,
     required final double barThickness,
     required final ({ double start, double end}) barMargin,
+    required final double labelsOffset,
   })
   {
     final stack = layoutData.stacks.putIfAbsent(stackIndex,
@@ -1128,7 +1146,9 @@ class StackedBarChartViewportRenderObject extends RenderBox
                 }
               case LabelPosition.outside:
                 final offset = Offset(
-                  inverted ? innerRect.left - lblSize.width : innerRect.right,
+                  inverted
+                    ? innerRect.left - lblSize.width - labelsOffset
+                    : innerRect.right + labelsOffset,
                   lblOffset.top,
                 );
                 stack.labels.add(LayoutLabel(
@@ -1179,7 +1199,9 @@ class StackedBarChartViewportRenderObject extends RenderBox
               case LabelPosition.outside:
                 final offset = Offset(
                   lblOffset.left,
-                  inverted ? outerRect.bottom : outerRect.top - lblSize.height,
+                  inverted
+                    ? outerRect.bottom + labelsOffset
+                    : outerRect.top - lblSize.height - labelsOffset,
                 );
                 stack.labels.add(LayoutLabel(
                   offset: offset,
@@ -1201,6 +1223,7 @@ class StackedBarChartViewportRenderObject extends RenderBox
   ValueListenable<double>? _animation;
   TicksResolver _ticksResolver;
   MeasureFormatter? _measureFormatter;
+  double _labelsOffset;
   bool _showZeroValues;
   TextStyle _mainAxisTextStyle;
   TextStyle _crossAxisTextStyle;

@@ -1,3 +1,8 @@
+## 0.3.1
+
+* Support for outside label offset in bar charts.
+* [fix] Clipping outside labels in bar charts.
+
 ## 0.3.0
 
 * Support for optional scrolling in bar charts by setting `barThickness`.
