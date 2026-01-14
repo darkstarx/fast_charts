@@ -43,6 +43,7 @@ class RadialBarPainter extends CustomPainter
   {
     if (_lastSize != size) {
       _lastSize = size;
+      _layoutData?.dispose();
       _layoutData = null;
     }
     final layoutData = _layoutData ??= _buildLayout(size);
@@ -115,6 +116,7 @@ class RadialBarPainter extends CustomPainter
     ;
     if (needRebuild) {
       _oldStacks = oldDelegate._stacks;
+      _layoutData?.dispose();
       _layoutData = null;
     }
     return needRebuild
@@ -126,6 +128,12 @@ class RadialBarPainter extends CustomPainter
   bool shouldRebuildSemantics(final RadialBarPainter oldDelegate)
   {
     return false;
+  }
+
+  void dispose()
+  {
+    _layoutData?.dispose();
+    _layoutData = null;
   }
 
   Map<int, _LayoutStack> _getStacks(final _LayoutData layoutData)
@@ -493,6 +501,14 @@ class _LayoutData
     stacks: {},
     labels: [],
   );
+
+  void dispose()
+  {
+    for (final label in labels) {
+      final (_, paragraph) = label;
+      paragraph.dispose();
+    }
+  }
 }
 
 

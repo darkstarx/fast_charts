@@ -126,6 +126,7 @@ class _RadialStackedBarChartState<D, T>
   void dispose()
   {
     _controller.dispose();
+    _painter?.dispose();
     super.dispose();
   }
 
@@ -163,9 +164,8 @@ class _RadialStackedBarChartState<D, T>
   @override
   Widget build(final BuildContext context)
   {
-    return LayoutBuilder(builder: (context, constraints) => CustomPaint(
-      size: constraints.biggest,
-      painter: RadialBarPainter(
+    return LayoutBuilder(builder: (context, constraints) {
+      _painter = RadialBarPainter(
         data: _stacks,
         animation: _currentAnimation,
         scale: widget.scale,
@@ -177,8 +177,12 @@ class _RadialStackedBarChartState<D, T>
         roundEnd: widget.roundEnd,
         padding: widget.padding,
         clipBehavior: widget.clipBehavior,
-      ),
-    ));
+      );
+      return CustomPaint(
+        size: constraints.biggest,
+        painter: _painter,
+      );
+    });
   }
 
   static BarChartStacks _stacksFromSeries<D, T>(
@@ -258,5 +262,6 @@ class _RadialStackedBarChartState<D, T>
   late BarChartStacks _stacks;
   late AnimationController _controller;
 
+  RadialBarPainter? _painter;
   Animation<double>? _currentAnimation;
 }

@@ -101,6 +101,7 @@ class _PieChartState<D, T> extends State<PieChart<D, T>>
   void dispose()
   {
     _controller.dispose();
+    _painter?.dispose();
     super.dispose();
   }
 
@@ -132,9 +133,8 @@ class _PieChartState<D, T> extends State<PieChart<D, T>>
   @override
   Widget build(final BuildContext context)
   {
-    return LayoutBuilder(builder: (context, constraints) => CustomPaint(
-      size: constraints.biggest,
-      painter: PiePainter(
+    return LayoutBuilder(builder: (context, constraints) {
+      _painter = PiePainter(
         data: _pie,
         animation: _currentAnimation,
         angle: widget.angle,
@@ -143,8 +143,12 @@ class _PieChartState<D, T> extends State<PieChart<D, T>>
         clipBehavior: widget.clipBehavior,
         strokes: widget.strokes,
         holeSize: widget.holeSize,
-      ),
-    ));
+      );
+      return CustomPaint(
+        size: constraints.biggest,
+        painter: _painter,
+      );
+    });
   }
 
   static Pie<D> _pieFromSeries<D, T>(final Series<D, T> series, {
@@ -185,5 +189,6 @@ class _PieChartState<D, T> extends State<PieChart<D, T>>
   late Pie<D> _pie;
   late AnimationController _controller;
 
+  PiePainter? _painter;
   Animation<double>? _currentAnimation;
 }

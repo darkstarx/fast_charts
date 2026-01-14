@@ -38,6 +38,7 @@ class PiePainter<D> extends CustomPainter
   {
     if (_lastSize != size) {
       _lastSize = size;
+      _layoutData?.dispose();
       _layoutData = null;
     }
     final layoutData = _layoutData ??= _buildLayout(size);
@@ -98,6 +99,7 @@ class PiePainter<D> extends CustomPainter
       || holeSize != oldDelegate.holeSize
     ;
     if (needRebuild) {
+      _layoutData?.dispose();
       _layoutData = null;
       _oldPie = _pie;
     }
@@ -110,6 +112,12 @@ class PiePainter<D> extends CustomPainter
   bool shouldRebuildSemantics(final PiePainter<D> oldDelegate)
   {
     return false;
+  }
+
+  void dispose()
+  {
+    _layoutData?.dispose();
+    _layoutData = null;
   }
 
   _LayoutData<D> _buildLayout(final Size size)
@@ -505,6 +513,14 @@ class _LayoutData<D>
     required this.pie,
     required this.labels,
   });
+
+  void dispose()
+  {
+    for (final label in labels) {
+      final (_, paragraph) = label;
+      paragraph.dispose();
+    }
+  }
 }
 
 

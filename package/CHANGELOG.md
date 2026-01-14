@@ -1,3 +1,7 @@
+## 0.3.2
+
+* [fix] Releasing internal cached resources.
+
 ## 0.3.1
 
 * Support for outside label offset in bar charts.

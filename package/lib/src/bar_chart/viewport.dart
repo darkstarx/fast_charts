@@ -407,31 +407,13 @@ class GroupedBarChartViewportRenderObject extends RenderBox
   {
     _viewportOffset.removeListener(markNeedsPaint);
     _animation?.removeListener(markNeedsPaint);
+    _layoutData?.dispose();
+    _layoutData = null;
+    _barGroups?.dispose();
+    _barGroups = null;
+    _oldBarGroups?.dispose();
+    _oldBarGroups = null;
     super.detach();
-  }
-
-  @override
-  double computeMinIntrinsicWidth(final double height)
-  {
-    return constraints.maxWidth;
-  }
-
-  @override
-  double computeMaxIntrinsicWidth(final double height)
-  {
-    return constraints.maxWidth;
-  }
-
-  @override
-  double computeMinIntrinsicHeight(final double width)
-  {
-    return constraints.maxHeight;
-  }
-
-  @override
-  double computeMaxIntrinsicHeight(final double width)
-  {
-    return constraints.maxHeight;
   }
 
   @override
@@ -439,6 +421,7 @@ class GroupedBarChartViewportRenderObject extends RenderBox
   {
     final newSize = constraints.biggest;
     if (!hasSize || size != newSize) {
+      _layoutData?.dispose();
       _layoutData = null;
       size = newSize;
     }
@@ -536,7 +519,7 @@ class GroupedBarChartViewportRenderObject extends RenderBox
       }
       canvas.drawParagraph(label.paragraph, label.offset - viewOffset);
     }
-    final barGroups = _barGroups = _getBars(layoutData);
+    final barGroups = _barGroups = _getBarGroups(layoutData);
     final barGroupLabels = <LayoutLabel>[];
     for (final barGroup in barGroups.values) {
       if (barGroup.bars.isEmpty) continue;
@@ -576,7 +559,11 @@ class GroupedBarChartViewportRenderObject extends RenderBox
 
   void markNeedsRebuild()
   {
-    _oldBarGroups = _barGroups;
+    if (_oldBarGroups != _barGroups) {
+      _oldBarGroups?.dispose();
+      _oldBarGroups = _barGroups;
+    }
+    _layoutData?.dispose();
     _layoutData = null;
     markNeedsLayout();
   }
@@ -760,6 +747,12 @@ class GroupedBarChartViewportRenderObject extends RenderBox
           ));
         }
     }
+    if (layoutData == null) {
+      for (final label in mainLabels) {
+        final (_, paragraph) = label;
+        paragraph.dispose();
+      }
+    }
 
     return LayoutMetrics(
       innerRect: innerRect,
@@ -896,12 +889,12 @@ class GroupedBarChartViewportRenderObject extends RenderBox
     );
   }
 
-  Map<int, LayoutBarGroup> _getBars(final LayoutData layoutData)
+  LayoutBarGroups _getBarGroups(final LayoutData layoutData)
   {
     if (animation == null) {
-      return layoutData.barGroups;
+      return LayoutBarGroups.copy(layoutData.barGroups);
     } else {
-      final result = <int, LayoutBarGroup>{};
+      final result = LayoutBarGroups.empty();
       final oldBarGroups = _oldBarGroups;
       if (oldBarGroups != null) {
         for (final entry in oldBarGroups.entries) {
@@ -935,9 +928,6 @@ class GroupedBarChartViewportRenderObject extends RenderBox
             ;
             layoutBarGroup.bars[entry.key] = LayoutBar(rect: rect, paint: paint);
           }
-          result[entry.key] = LayoutBarGroup(
-            bars: layoutBarGroup.bars,
-          );
         }
       }
       for (final entry in layoutData.barGroups.entries) {
@@ -1029,9 +1019,6 @@ class GroupedBarChartViewportRenderObject extends RenderBox
           final rect = RRect.lerp(oldRect, newRect, animation!.value)!;
           layoutBarGroup.bars[barId] = LayoutBar(rect: rect, paint: oldPaint);
         }
-        result[groupId] = LayoutBarGroup(
-          bars: layoutBarGroup.bars,
-        );
       }
       return result;
     }
@@ -1190,8 +1177,8 @@ class GroupedBarChartViewportRenderObject extends RenderBox
   }
 
   LayoutData? _layoutData;
-  Map<int, LayoutBarGroup>? _barGroups;
-  Map<int, LayoutBarGroup>? _oldBarGroups;
+  LayoutBarGroups? _barGroups;
+  LayoutBarGroups? _oldBarGroups;
 
   ChartBars _data;
   ValueListenable<double>? _animation;
@@ -1231,7 +1218,6 @@ class LayoutMetrics
   final double upperPixels;
   final double dataRange;
   final List<ui.Paragraph> domainLabels;
-  // final List<BarsGroup> groups;
 
   const LayoutMetrics({
     required this.innerRect,
@@ -1243,7 +1229,6 @@ class LayoutMetrics
     required this.upperPixels,
     required this.dataRange,
     required this.domainLabels,
-    // required this.groups,
   });
 
   /// Calculates the bar thickness based on [crossAxisSize].
@@ -1281,6 +1266,13 @@ class LayoutMetrics
     groups: groups,
   );
 
+  void dispose()
+  {
+    for (final label in domainLabels) {
+      label.dispose();
+    }
+  }
+
   static double calcScrollAreaSize({
     required final double barPadding,
     required final double barSpacing,
@@ -1304,7 +1296,7 @@ class LayoutData
   final List<(Offset, Offset)> guideLines;
   final List<(Offset, ui.Paragraph)> mainLabels;
   final List<LayoutLabel> crossLabels;
-  final Map<int, LayoutBarGroup> barGroups;
+  final LayoutBarGroups barGroups;
 
   const LayoutData({
     required this.clipRect,
@@ -1325,9 +1317,28 @@ class LayoutData
     guideLines: [],
     mainLabels: [],
     crossLabels: [],
-    barGroups: {},
+    barGroups: LayoutBarGroups.empty(),
   );
 
+  void dispose()
+  {
+    for (final e in mainLabels) {
+      final (_, paragraph) = e;
+      paragraph.dispose();
+    }
+    for (final label in crossLabels) {
+      label.dispose();
+    }
+    barGroups.dispose();
+  }
+
+  /// Returns a copy of this layout data with specified changes.
+  ///
+  /// Be careful with [mainLabels], [crossLabels] and [barGroups]. This method
+  /// is not responsible for disposing the old values, so they must be disposed
+  /// manually if they are not needed anymore.
+  /// Also be careful while disposing a copy of this layout data, internal data
+  /// may be disposed twice.
   LayoutData copyWith({
     final Rect? clipRect,
     final Rect? scrollAreaClipRect,
@@ -1336,7 +1347,7 @@ class LayoutData
     final List<(Offset, Offset)>? guideLines,
     final List<(Offset, ui.Paragraph)>? mainLabels,
     final List<LayoutLabel>? crossLabels,
-    final Map<int, LayoutBarGroup>? barGroups,
+    final LayoutBarGroups? barGroups,
   }) => LayoutData(
     clipRect: clipRect ?? this.clipRect,
     scrollAreaClipRect: scrollAreaClipRect ?? this.scrollAreaClipRect,
@@ -1350,17 +1361,68 @@ class LayoutData
 }
 
 
+class LayoutBarGroups
+{
+  Iterable<MapEntry<int, LayoutBarGroup>> get entries => _groups.entries;
+
+  Iterable<LayoutBarGroup> get values => _groups.values;
+
+  LayoutBarGroups.empty()
+  : _groups = {}
+  , _shouldBeDisposed = true
+  ;
+
+  LayoutBarGroups.copy(final LayoutBarGroups source)
+  : _groups = source._groups
+  , _shouldBeDisposed = false
+  ;
+
+  LayoutBarGroup? operator [](final int key) => _groups[key];
+
+  void operator []=(final int key, final LayoutBarGroup value)
+  {
+    _groups[key] = value;
+  }
+
+  bool containsKey(final int key) => _groups.containsKey(key);
+
+  LayoutBarGroup putIfAbsent(
+    final int key,
+    final LayoutBarGroup Function() ifAbsent,
+  )
+  {
+    return _groups.putIfAbsent(key, ifAbsent);
+  }
+
+  void dispose()
+  {
+    if (!_shouldBeDisposed) return;
+    for (final group in _groups.values) {
+      group.dispose();
+    }
+    _shouldBeDisposed = false;
+  }
+
+  bool _shouldBeDisposed;
+
+  final Map<int, LayoutBarGroup> _groups;
+}
+
+
 class LayoutBarGroup
 {
   final Map<int, LayoutBar> bars;
 
-  const LayoutBarGroup({
-    required this.bars,
-  });
+  LayoutBarGroup.empty()
+  : bars = SplayTreeMap()
+  ;
 
-  factory LayoutBarGroup.empty() => LayoutBarGroup(
-    bars: SplayTreeMap(),
-  );
+  void dispose()
+  {
+    for (final bar in bars.values) {
+      bar.dispose();
+    }
+  }
 }
 
 
@@ -1376,9 +1438,21 @@ class LayoutBar
     this.label,
   });
 
+  /// Returns a copy of this layout bar with specified [label].
+  ///
+  /// Be careful with old value of [label]. This method is not responsible for
+  /// disposing the old value, so it must be disposed manually if it is not
+  /// needed anymore.
+  /// Also be careful while disposing a copy of this layout bar, internal data
+  /// may be disposed twice.
   LayoutBar withLabel(final LayoutLabel label) => LayoutBar(
     rect: rect, paint: paint, label: label,
   );
+
+  void dispose()
+  {
+    label?.dispose();
+  }
 }
 
 
@@ -1393,4 +1467,9 @@ class LayoutLabel
     required this.rect,
     required this.paragraph,
   });
+
+  void dispose()
+  {
+    paragraph.dispose();
+  }
 }

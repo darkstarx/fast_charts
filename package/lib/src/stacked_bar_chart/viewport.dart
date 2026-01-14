@@ -408,6 +408,12 @@ class StackedBarChartViewportRenderObject extends RenderBox
   {
     _viewportOffset.removeListener(markNeedsPaint);
     _animation?.removeListener(markNeedsPaint);
+    _layoutData?.dispose();
+    _layoutData = null;
+    _stacks?.dispose();
+    _stacks = null;
+    _oldStacks?.dispose();
+    _oldStacks = null;
     super.detach();
   }
 
@@ -416,6 +422,7 @@ class StackedBarChartViewportRenderObject extends RenderBox
   {
     final newSize = constraints.biggest;
     if (!hasSize || size != newSize) {
+      _layoutData?.dispose();
       _layoutData = null;
       size = newSize;
     }
@@ -464,7 +471,7 @@ class StackedBarChartViewportRenderObject extends RenderBox
       }
       return true;
     }());
-    final layoutData = _layoutData ?? _buildLayout();
+    final layoutData = _layoutData ??= _buildLayout();
     final axisPaint = Paint()
       ..color = axisColor
       ..strokeWidth = axisThickness
@@ -559,7 +566,11 @@ class StackedBarChartViewportRenderObject extends RenderBox
 
   void markNeedsRebuild()
   {
-    _oldStacks = _stacks;
+    if (_oldStacks != _stacks) {
+      _oldStacks?.dispose();
+      _oldStacks = _stacks;
+    }
+    _layoutData?.dispose();
     _layoutData = null;
     markNeedsLayout();
   }
@@ -743,6 +754,12 @@ class StackedBarChartViewportRenderObject extends RenderBox
           ));
         }
     }
+    if (layoutData == null) {
+      for (final label in mainLabels) {
+        final (_, paragraph) = label;
+        paragraph.dispose();
+      }
+    }
 
     return LayoutMetrics(
       innerRect: innerRect,
@@ -918,12 +935,12 @@ class StackedBarChartViewportRenderObject extends RenderBox
     );
   }
 
-  Map<int, LayoutStack> _getStacks(final LayoutData layoutData)
+  LayoutStacks _getStacks(final LayoutData layoutData)
   {
     if (animation == null) {
-      return layoutData.stacks;
+      return LayoutStacks.copy(layoutData.stacks);
     } else {
-      final result = <int, LayoutStack>{};
+      final result = LayoutStacks.empty();
       final oldStacks = _oldStacks;
       if (oldStacks != null) {
         for (final entry in oldStacks.entries) {
@@ -969,16 +986,13 @@ class StackedBarChartViewportRenderObject extends RenderBox
             }
             layoutStack.segments[entry.key] = (rect, paint);
           }
-          result[entry.key] = LayoutStack(
-            segments: layoutStack.segments,
-            labels: layoutStack.labels,
-            clipRRect: RRect.fromRectAndCorners(stackRect!,
-              topLeft: rrect.tlRadius,
-              bottomLeft: rrect.blRadius,
-              topRight: rrect.trRadius,
-              bottomRight: rrect.brRadius,
-            )
+          final clipRRect = RRect.fromRectAndCorners(stackRect!,
+            topLeft: rrect.tlRadius,
+            bottomLeft: rrect.blRadius,
+            topRight: rrect.trRadius,
+            bottomRight: rrect.brRadius,
           );
+          result[entry.key] = layoutStack.withClipRRect(clipRRect);
         }
       }
       for (final entry in layoutData.stacks.entries) {
@@ -1068,16 +1082,13 @@ class StackedBarChartViewportRenderObject extends RenderBox
           }
           layoutStack.segments[segmentId] = (rect, oldPaint);
         }
-        result[stackId] = LayoutStack(
-          segments: layoutStack.segments,
-          labels: layoutStack.labels,
-          clipRRect: RRect.fromRectAndCorners(stackRect!,
-            topLeft: rrect.tlRadius,
-            bottomLeft: rrect.blRadius,
-            topRight: rrect.trRadius,
-            bottomRight: rrect.brRadius,
-          )
+        final clipRRect = RRect.fromRectAndCorners(stackRect!,
+          topLeft: rrect.tlRadius,
+          bottomLeft: rrect.blRadius,
+          topRight: rrect.trRadius,
+          bottomRight: rrect.brRadius,
         );
+        result[stackId] = layoutStack.withClipRRect(clipRRect);
       }
       return result;
     }
@@ -1216,8 +1227,8 @@ class StackedBarChartViewportRenderObject extends RenderBox
   }
 
   LayoutData? _layoutData;
-  Map<int, LayoutStack>? _stacks;
-  Map<int, LayoutStack>? _oldStacks;
+  LayoutStacks? _stacks;
+  LayoutStacks? _oldStacks;
 
   BarChartStacks _data;
   ValueListenable<double>? _animation;
@@ -1301,6 +1312,13 @@ class LayoutMetrics
     stacksNumber: stacksNumber,
   );
 
+  void dispose()
+  {
+    for (final label in domainLabels) {
+      label.dispose();
+    }
+  }
+
   static double calcScrollAreaSize({
     required final double barPadding,
     required final double barSpacing,
@@ -1321,7 +1339,7 @@ class LayoutData
   final List<(Offset, Offset)> guideLines;
   final List<(Offset, ui.Paragraph)> mainLabels;
   final List<LayoutLabel> crossLabels;
-  final Map<int, LayoutStack> stacks;
+  final LayoutStacks stacks;
 
   const LayoutData({
     required this.clipRect,
@@ -1342,9 +1360,28 @@ class LayoutData
     guideLines: [],
     mainLabels: [],
     crossLabels: [],
-    stacks: {},
+    stacks: LayoutStacks.empty(),
   );
 
+  void dispose()
+  {
+    for (final e in mainLabels) {
+      final (_, paragraph) = e;
+      paragraph.dispose();
+    }
+    for (final label in crossLabels) {
+      label.dispose();
+    }
+    stacks.dispose();
+  }
+
+  /// Returns a copy of this layout data with specified changes.
+  ///
+  /// Be careful with [mainLabels], [crossLabels] and [stacks]. This method
+  /// is not responsible for disposing the old values, so they must be disposed
+  /// manually if they are not needed anymore.
+  /// Also be careful while disposing a copy of this layout data, internal data
+  /// may be disposed twice.
   LayoutData copyWith({
     final Rect? clipRect,
     final Rect? scrollAreaClipRect,
@@ -1354,7 +1391,7 @@ class LayoutData
     final List<(Offset, Offset)>? guideLines,
     final List<(Offset, ui.Paragraph)>? mainLabels,
     final List<LayoutLabel>? crossLabels,
-    final Map<int, LayoutStack>? stacks,
+    final LayoutStacks? stacks,
   }) => LayoutData(
     clipRect: clipRect ?? this.clipRect,
     scrollAreaClipRect: scrollAreaClipRect ?? this.scrollAreaClipRect,
@@ -1368,22 +1405,67 @@ class LayoutData
 }
 
 
+class LayoutStacks
+{
+  Iterable<MapEntry<int, LayoutStack>> get entries => _stacks.entries;
+
+  Iterable<LayoutStack> get values => _stacks.values;
+
+  LayoutStacks.empty()
+  : _stacks = {}
+  , _shouldBeDisposed = true
+  ;
+
+  LayoutStacks.copy(final LayoutStacks source)
+  : _stacks = source._stacks
+  , _shouldBeDisposed = false
+  ;
+
+  LayoutStack? operator [](final int key) => _stacks[key];
+
+  void operator []=(final int key, final LayoutStack value)
+  {
+    _stacks[key] = value;
+  }
+
+  bool containsKey(final int key) => _stacks.containsKey(key);
+
+  LayoutStack putIfAbsent(final int key, final LayoutStack Function() ifAbsent)
+  {
+    return _stacks.putIfAbsent(key, ifAbsent);
+  }
+
+  void dispose()
+  {
+    if (!_shouldBeDisposed) return;
+    for (final stack in _stacks.values) {
+      stack.dispose();
+    }
+    _shouldBeDisposed = false;
+  }
+
+  bool _shouldBeDisposed;
+
+  final Map<int, LayoutStack> _stacks;
+}
+
+
 class LayoutStack
 {
   final Map<int, (Rect, Paint)> segments;
   final List<LayoutLabel> labels;
   final RRect clipRRect;
 
-  const LayoutStack({
-    required this.segments,
-    required this.labels,
-    required this.clipRRect,
-  });
-
-  factory LayoutStack.empty() => LayoutStack(
+  factory LayoutStack.empty() => LayoutStack._(
     segments: SplayTreeMap(),
     labels: [],
     clipRRect: RRect.zero,
+  );
+
+  LayoutStack withClipRRect(final RRect clipRRect) => LayoutStack._(
+    segments: segments,
+    labels: labels,
+    clipRRect: clipRRect,
   );
 
   LayoutStack withBorderRadius(final BorderRadius radius)
@@ -1399,12 +1481,25 @@ class LayoutStack
       }
     }
     assert(clipRect != null);
-    return LayoutStack(
+    return LayoutStack._(
       segments: segments,
       labels: labels,
       clipRRect: radius.toRRect(clipRect!),
     );
   }
+
+  void dispose()
+  {
+    for (final label in labels) {
+      label.dispose();
+    }
+  }
+
+  const LayoutStack._({
+    required this.segments,
+    required this.labels,
+    required this.clipRRect,
+  });
 }
 
 
@@ -1419,4 +1514,9 @@ class LayoutLabel
     required this.rect,
     required this.paragraph,
   });
+
+  void dispose()
+  {
+    paragraph.dispose();
+  }
 }
