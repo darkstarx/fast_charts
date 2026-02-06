@@ -407,13 +407,19 @@ class GroupedBarChartViewportRenderObject extends RenderBox
   {
     _viewportOffset.removeListener(markNeedsPaint);
     _animation?.removeListener(markNeedsPaint);
+    super.detach();
+  }
+
+  @override
+  void dispose()
+  {
     _layoutData?.dispose();
     _layoutData = null;
     _barGroups?.dispose();
     _barGroups = null;
     _oldBarGroups?.dispose();
     _oldBarGroups = null;
-    super.detach();
+    super.dispose();
   }
 
   @override
@@ -599,7 +605,7 @@ class GroupedBarChartViewportRenderObject extends RenderBox
         textDirection: TextDirection.ltr,
         textAlign: domainTextAlign,
       ));
-      labelBuilder.pushStyle(mainAxisTextStyle.getTextStyle());
+      labelBuilder.pushStyle(crossAxisTextStyle.getTextStyle());
       labelBuilder.addText(group.domain);
       final label = labelBuilder.build();
       label.layout(ui.ParagraphConstraints(width: crossLabelWidth));

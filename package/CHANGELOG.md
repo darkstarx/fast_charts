@@ -1,3 +1,8 @@
+## 0.3.3
+
+* [fix] Proper disposal of render objects.
+* [fix] crossAxisTextStyle is used correctly.
+
 ## 0.3.2
 
 * [fix] Releasing internal cached resources.

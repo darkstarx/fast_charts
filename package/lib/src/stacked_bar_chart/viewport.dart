@@ -408,13 +408,19 @@ class StackedBarChartViewportRenderObject extends RenderBox
   {
     _viewportOffset.removeListener(markNeedsPaint);
     _animation?.removeListener(markNeedsPaint);
+    super.detach();
+  }
+
+  @override
+  void dispose()
+  {
     _layoutData?.dispose();
     _layoutData = null;
     _stacks?.dispose();
     _stacks = null;
     _oldStacks?.dispose();
     _oldStacks = null;
-    super.detach();
+    super.dispose();
   }
 
   @override
@@ -606,7 +612,7 @@ class StackedBarChartViewportRenderObject extends RenderBox
         textDirection: TextDirection.ltr,
         textAlign: domainTextAlign,
       ));
-      labelBuilder.pushStyle(mainAxisTextStyle.getTextStyle());
+      labelBuilder.pushStyle(crossAxisTextStyle.getTextStyle());
       labelBuilder.addText(stack.domain);
       final label = labelBuilder.build();
       label.layout(ui.ParagraphConstraints(width: crossLabelWidth));
